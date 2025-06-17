@@ -8,12 +8,28 @@ const password = ref('')
 const router = useRouter()
 const isLoggedIn = inject('isLoggedIn')
 
-function handleLogin(e) {
+async function handleLogin(e) {
   e.preventDefault()
-  // Here you would normally check credentials with your backend
-  // For now, just redirect to home
-  isLoggedIn.value = true
-  router.push('/')
+  const payload = {
+    username: username.value,
+    password: password.value
+  }
+
+  const response = await fetch('http://13.62.56.34:8000/api/token/', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
+
+  const data = await response.json() // <--- This is how you get the response data
+
+  if (response.ok) {
+    // Login successful, use data (e.g., save token, redirect)
+    console.log('Login success:', data)
+  } else {
+    // Handle error
+    alert(data.message || 'Login failed')
+  }
 }
 </script>
 
@@ -25,12 +41,12 @@ function handleLogin(e) {
       <label for="first">
         Username:
       </label>
-      <input v-model="username" type="text" id="first" name="first" placeholder="Enter your Username" required>
+      <input v-model="username" value="username" type="text" id="first" name="first" placeholder="Enter your Username" required>
 
       <label for="password">
         Password:
       </label>
-      <input v-model="password" type="password" id="password" name="password" placeholder="Enter your Password" required>
+      <input v-model="password" value="password" type="password" id="password" name="password" placeholder="Enter your Password" required>
 
       <div class="wrap">
         <button type="submit">
