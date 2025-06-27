@@ -6,15 +6,21 @@ import '../assets/form.css'
 const email = ref('')
 const username = ref('')
 const password = ref('')
+const confirmPassword = ref('')
 const race = ref('')
 const router = useRouter()
 
 async function handleRegister(e) {
   e.preventDefault()
+  if (password.value !== confirmPassword.value) {
+    alert('Passwords do not match!')
+    return
+  }
   const payload = {
     email: email.value,
     username: username.value,
     password: password.value,
+    password_confirm: confirmPassword.value, 
     race: race.value
   }
   console.log('Data sent to Django backend:', payload) // This logs the data to the console
@@ -29,33 +35,48 @@ async function handleRegister(e) {
     // Registration successful, redirect or show message
     router.push('/login')
   } else {
-    // Handle error (e.g., show error message)
-    alert(data.message || 'Registration failed')
+      if (data.detail) {
+    alert(data.detail)
+  } else if (typeof data === 'object') {
+    // Show all field errors
+    alert(Object.values(data).flat().join('\n'))
+  } else {
+    alert('An error occurred.')
   }
+}
 }
 </script>
 
 <template>
   <div class="main">
-    <h1>MuieGrumpy</h1>
-    <h3>Enter your muiegrumpy credentials</h3>
+    <h1>Register</h1>
+    <h3>Enter your register credentials</h3>
     <form @submit="handleRegister">
       <label for="email">
         Email:
       </label>
       <input v-model="email" value = "email" type="email" id="email" name="email" placeholder="Enter your Email" required>
-      <label for="first">
-        Username:
+      <label for="username">
+        Character name:
       </label>
-      <input v-model="username" value = "username"type="text" id="first" name="first" placeholder="Enter your Username" required>
-      <label for="first">
+      <input v-model="username" value = "username"type="text" id="first" name="first" placeholder="Enter your Character Name" required>
+      <label for="race">
         Race
       </label>
-      <input v-model="race" value = "race" type="text" id="race" name="race" placeholder="Enter your Race" required>
+      <select v-model="race" id="race" name="race" required>
+        <option disabled value="">Select your race</option>
+        <option value="mage">Mage</option>
+        <option value="warrior">Warrior</option>
+        <option value="assassin">Assassin</option>
+      </select>
       <label for="password">
         Password:
       </label>
-      <input v-model="password" value ="password" type="password" id="password" name="password" placeholder="Enter your Password" required>
+      <input v-model="password" type="password" placeholder="Password" required>
+      <label for="confirm_password">
+        Confirm Password:
+      </label>
+      <input v-model="confirmPassword" type="password" placeholder="Confirm Password" required>
       <div class="wrap">
         <button type="submit">
           Submit

@@ -21,22 +21,34 @@ async function handleLogin(e) {
     body: JSON.stringify(payload)
   })
 
-  const data = await response.json() // <--- This is how you get the response data
+  const data = await response.json()
 
   if (response.ok) {
-    // Login successful, use data (e.g., save token, redirect)
-    console.log('Login success:', data)
+    // Save tokens
+    alert('Login successful')
+    console.log('Data received from Django backend:', data) // This logs the data to the
+    localStorage.setItem('access', data.access)
+    localStorage.setItem('refresh', data.refresh)
+    localStorage.setItem('username', username.value)
+    isLoggedIn.value = true
+    router.push('/') // Redirect to x page after successful login
   } else {
-    // Handle error
-    alert(data.message || 'Login failed')
+      if (data.detail) {
+    alert(data.detail)
+  } else if (typeof data === 'object') {
+    // Show all field errors
+    alert(Object.values(data).flat().join('\n'))
+  } else {
+    alert('An error occurred.')
+  }
   }
 }
 </script>
 
 <template>
   <div class="main">
-    <h1>MuieGrumpy</h1>
-    <h3>Enter your muiegrumpy credentials</h3>
+    <h1>Login</h1>
+    <h3>Enter your login credentials</h3>
     <form @submit="handleLogin">
       <label for="first">
         Username:

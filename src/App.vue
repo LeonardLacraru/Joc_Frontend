@@ -1,10 +1,18 @@
 <script setup>
-import { ref, provide } from 'vue'
+import { onMounted, ref, provide } from 'vue'
 import { useRoute } from 'vue-router'
 import './assets/navbar.css'
+
 const isLoggedIn = ref(false)
 provide('isLoggedIn', isLoggedIn)
 const route = useRoute()
+
+function logout() {
+  isLoggedIn.value = false
+  localStorage.removeItem('access')
+  localStorage.removeItem('refresh')
+  router.push('/') // page after logout
+}
 </script>
 
 <template>
@@ -15,7 +23,7 @@ const route = useRoute()
     <li v-if="isLoggedIn"><router-link to="/profile">Profile</router-link></li>
     <li v-if="isLoggedIn"><router-link to="/inventory">Inventory</router-link></li>
     <li v-if="isLoggedIn"><router-link to="/about">About</router-link></li>
-    <li v-if="isLoggedIn"><a href="#" @click.prevent="isLoggedIn = false">Logout</a></li>
+    <li v-if="isLoggedIn"><a href="#" @click.prevent="logout">Logout</a></li>
   </ul>
   <router-view />
 </template>

@@ -78,3 +78,20 @@ button {
   align-items: center;
   justify-content: center;
 }
+
+select {
+  width: 100%;
+  padding: 0.625rem;      /* 10px */
+  border: 0.0625rem solid #ddd; /* 1px */
+  border-radius: 0.3125rem;     /* 5px */
+  background-color: #fff;
+  font-size: 1rem;
+  margin-bottom: 0.9375rem;     /* 15px */
+  color: #333;
+}
+
+.error {
+    color: red;
+    font-size: 0.875rem; /* 14px */
+    margin-top: 0.3125rem; /* 5px */
+}
