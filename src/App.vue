@@ -1,17 +1,27 @@
 <script setup>
-import { onMounted, ref, provide } from 'vue'
-import { useRoute } from 'vue-router'
+import { onMounted, ref, provide, watchEffect } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import './assets/navbar.css'
 
 const isLoggedIn = ref(false)
 provide('isLoggedIn', isLoggedIn)
 const route = useRoute()
+const router = useRouter()
+
+watchEffect(() => {
+  const noNavbarRoutes = ['/login', '/register']
+  if (noNavbarRoutes.includes(route.path)) {
+    document.body.classList.add('no-navbar')
+  } else {
+    document.body.classList.remove('no-navbar')
+  }
+})
 
 function logout() {
   isLoggedIn.value = false
   localStorage.removeItem('access')
   localStorage.removeItem('refresh')
-  router.push('/') // page after logout
+  router.replace('/')
 }
 </script>
 

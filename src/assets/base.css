@@ -91,3 +91,9 @@ body {
   background-position: right top;
   margin-left: 12.5rem;
 }
+
+body.no-navbar {
+  margin-left: 0;
+  background-size: 100vw 100vh;
+  background-position: center top;
+}

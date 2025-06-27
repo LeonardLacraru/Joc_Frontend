@@ -3,7 +3,7 @@ import { ref, inject } from 'vue'
 import { useRouter } from 'vue-router'
 import '../assets/form.css'
 
-const username = ref('')
+const character_name = ref('')
 const password = ref('')
 const router = useRouter()
 const isLoggedIn = inject('isLoggedIn')
@@ -11,7 +11,7 @@ const isLoggedIn = inject('isLoggedIn')
 async function handleLogin(e) {
   e.preventDefault()
   const payload = {
-    username: username.value,
+    username: character_name.value,
     password: password.value
   }
 
@@ -24,12 +24,10 @@ async function handleLogin(e) {
   const data = await response.json()
 
   if (response.ok) {
-    // Save tokens
-    alert('Login successful')
     console.log('Data received from Django backend:', data) // This logs the data to the
     localStorage.setItem('access', data.access)
     localStorage.setItem('refresh', data.refresh)
-    localStorage.setItem('username', username.value)
+    localStorage.setItem('character_name', character_name.value)
     isLoggedIn.value = true
     router.push('/') // Redirect to x page after successful login
   } else {
@@ -51,14 +49,14 @@ async function handleLogin(e) {
     <h3>Enter your login credentials</h3>
     <form @submit="handleLogin">
       <label for="first">
-        Username:
+        Character name:
       </label>
-      <input v-model="username" value="username" type="text" id="first" name="first" placeholder="Enter your Username" required>
+      <input v-model="character_name"  type="text" id="first" name="first" placeholder="Enter your Username" required>
 
       <label for="password">
         Password:
       </label>
-      <input v-model="password" value="password" type="password" id="password" name="password" placeholder="Enter your Password" required>
+      <input v-model="password"  type="password" id="password" name="password" placeholder="Enter your Password" required>
 
       <div class="wrap">
         <button type="submit">

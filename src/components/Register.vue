@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import '../assets/form.css'
 
 const email = ref('')
-const username = ref('')
+const character_name = ref('')
 const password = ref('')
 const confirmPassword = ref('')
 const race = ref('')
@@ -18,7 +18,7 @@ async function handleRegister(e) {
   }
   const payload = {
     email: email.value,
-    username: username.value,
+    username: character_name.value,
     password: password.value,
     password_confirm: confirmPassword.value, 
     race: race.value
@@ -51,15 +51,18 @@ async function handleRegister(e) {
   <div class="main">
     <h1>Register</h1>
     <h3>Enter your register credentials</h3>
+
     <form @submit="handleRegister">
       <label for="email">
         Email:
       </label>
-      <input v-model="email" value = "email" type="email" id="email" name="email" placeholder="Enter your Email" required>
-      <label for="username">
+      <input v-model="email" type="email" id="email" name="email" placeholder="Enter your Email" required>
+  
+      <label for="charater_name">
         Character name:
       </label>
-      <input v-model="username" value = "username"type="text" id="first" name="first" placeholder="Enter your Character Name" required>
+      <input v-model="character_name" type="text" id="first" name="first" placeholder="Enter your Character Name" required>
+      
       <label for="race">
         Race
       </label>
@@ -69,14 +72,17 @@ async function handleRegister(e) {
         <option value="warrior">Warrior</option>
         <option value="assassin">Assassin</option>
       </select>
+      
       <label for="password">
         Password:
       </label>
       <input v-model="password" type="password" placeholder="Password" required>
+      
       <label for="confirm_password">
         Confirm Password:
       </label>
       <input v-model="confirmPassword" type="password" placeholder="Confirm Password" required>
+      
       <div class="wrap">
         <button type="submit">
           Submit
