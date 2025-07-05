@@ -15,6 +15,7 @@ const str_cost = ref(0);
 const dex_cost = ref(0);
 const int_cost = ref(0);
 const hp_cost = ref(0);
+const equippedItems = ref([]);
 const statLabels = {
   crit_dmg: "Critical Damage",
   crit_rate: "Critical Rate",
@@ -27,6 +28,16 @@ const statLabels = {
   phys_def: "Physical Defense",
   strength: "Strength",
 };
+
+const equipmentSlots = [
+  { type: "weapon", class: "weapon-slot" },
+  { type: "helmet", class: "helmet-slot" },
+  { type: "armor", class: "armor-slot", big: true },
+  { type: "leggings", class: "leggings-slot", big: true },
+  { type: "boots", class: "boots-slot" },
+  { type: "gloves", class: "gloves-slot" },
+];
+
 //Functions
 onMounted(async () => {
   await fetchProfile();
@@ -39,6 +50,7 @@ async function fetchProfile() {
       const data = await response.json();
       profile.value = data || 0;
       inventory.value = data.inventory_items || 0;
+      equippedItems.value = data.equipped_items || 0;
       current_hp.value = data.stats.current_hp || 0;
       loading.value = false;
       console.log("Profile data fetched successfully:", profile.value);
@@ -106,7 +118,7 @@ function generateImageName(itemName, rarity) {
   return new URL(`../assets/items/${fileName}`, import.meta.url).href;
 }
 
- async function equipItem(itemId) {
+async function equipItem(itemId) {
   try {
     const response = await authFetch(
       `${API_BASE_URL}/inventory/equip/${itemId}/`,
@@ -133,18 +145,42 @@ function formatQuantity(qty) {
 }
 
 const gridInventory = computed(() => {
+  // Only include unequipped items
+  const unequipped = inventory.value.filter(
+    (item) => item && item.is_equipped === false
+  );
+  // Fill up to SLOT_COUNT with nulls
   const slots = Array(SLOT_COUNT).fill(null);
-  inventory.value.forEach((item, idx) => {
-    if (idx < SLOT_COUNT) slots[idx] = item;
-  });
+  for (let i = 0; i < unequipped.length && i < SLOT_COUNT; i++) {
+    slots[i] = unequipped[i];
+  }
   return slots;
 });
 
 const filteredStats = computed(() => {
   if (!profile.value.total_stats) return [];
   return Object.entries(profile.value.total_stats).filter(
-    ([k]) => !["lifesteal","crit_dmg", "crit_rate","hit_rate","magic_def", "phys_def"].includes(k)
+    ([k]) =>
+      ![
+        "lifesteal",
+        "crit_dmg",
+        "crit_rate",
+        "hit_rate",
+        "magic_def",
+        "phys_def",
+      ].includes(k)
   );
+});
+
+const equippedByType = computed(() => {
+  const mapping = {};
+  for (const item of equippedItems.value) {
+    if (item.item && item.item.type) {
+      mapping[item.item.type] = item;
+    }
+  }
+  console.log("Equipped items by type:", mapping);
+  return mapping;
 });
 </script>
 
@@ -154,126 +190,138 @@ const filteredStats = computed(() => {
       <!-- Stânga sus: echipamente și statistici -->
       <div class="left-panel">
         <div class="equipment-box">
-          <div class="placeholder-slot weapon-slot">Weapon</div>
-          <div class="placeholder-slot helmet-slot">Helmet</div>
-          <div class="placeholder-slot-bigger-slot armor-slot">Armor</div>
-          <div class="placeholder-slot-bigger-slot leggings-slot">Leggings</div>
-          <div class="placeholder-slot boots-slot">Boots</div>
-          <div class="placeholder-slot gloves-slot">Gloves</div>
+          <div v-for="slot in equipmentSlots" :key="slot.type"
+            :class="['placeholder-slot', slot.class, { 'placeholder-slot-bigger-slot': slot.big }]">
+            <template v-if="equippedByType[slot.type]">
+              <div class="tooltip-container">
+                <img :src="generateImageName(
+            equippedByType[slot.type].item.name,
+            equippedByType[slot.type].item.rarity
+            )" class="item-icon" :alt="equippedByType[slot.type].item.name" />
+                <div class="custom-tooltip">
+                  <div class="tt-font-name" :class="`rarity-${equippedByType[slot.type].item.rarity}`">
+                    {{ equippedByType[slot.type].item.name }}
+                  </div>
+                  <div class="tt-font">
+                    Required Level: {{ equippedByType[slot.type].item.required_level }}
+                  </div>
+                  <div class="tt-font">
+                    Sell: {{ equippedByType[slot.type].item.required_gold }} 🟡
+                  </div>
+                  <div class="tt-stats" v-if="equippedByType[slot.type].item.stats?.length">
+                    Stats:
+                    <div v-for="(stat, sidx) in equippedByType[slot.type].item.stats" :key="sidx" class="tt-stat">
+                      {{ statLabels[stat.name] || stat.name }}:
+                      <span>
+                        {{
+                        ['crit_rate', 'hit_rate', 'lifesteal'].includes(stat.name)
+                        ? stat.value + '%'
+                        : stat.value
+                        }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>>
+            </template>
+            <template v-else>
+              {{ slot.type.charAt(0).toUpperCase() + slot.type.slice(1) }}
+            </template>
+          </div>
         </div>
       </div>
-      <!-- Dreapta sus: Add stat points -->
-      <div class="right-panel">
-        <div class="stats-box">
-          <h2>Character stats</h2>
-          <div class="stat-line">Level: {{ profile.level || 0 }}</div>
-          <div class="stat-line">
-            Experience: {{ profile.experience }} /
-            {{ profile.level * 40 || 0 }}
-          </div>
-          <div v-if="profile.total_stats">
-            <div
-              v-for="[key, value] in filteredStats"
-              :key="key"
-              class="stat-line"
-            >
-              <template v-if="key === 'hp'">
-                {{ statLabels[key] || key }}: {{ current_hp }}/{{ value }}
-              </template>
-              <template v-else>
-                {{ statLabels[key] || key }}: {{ value }}
-              </template>
-            </div>
-          </div>
-        </div>
-        <div class="add-stats-box">
-          <h2>Add stat points</h2>
-          <div v-if="profile.stats" class="stat-points-container">
-            <div class="stat-upgrade">
-              <span>Strength</span>
-              <span> Cost: {{ str_cost }} 🟡 </span>
-              <button @click="upgradeStat('strength')">+</button>
-            </div>
-            <div class="stat-upgrade">
-              <span>Dexterity</span>
-              <span> Cost: {{ dex_cost }} 🟡 </span>
-              <button @click="upgradeStat('dexterity')">+</button>
-            </div>
-            <div class="stat-upgrade">
-              <span>Intelligence</span>
-              <span> Cost: {{ int_cost }} 🟡 </span>
-              <button @click="upgradeStat('inteligence')">+</button>
-            </div>
-            <div class="stat-upgrade">
-              <span>HP</span>
-              <span> Cost: {{ hp_cost }} 🟡 </span>
-              <button @click="upgradeStat('hp')">+</button>
-            </div>
-          </div>
-          <div v-else>No stat points available</div>
+  <!-- Dreapta sus: Add stat points -->
+  <div class="right-panel">
+    <div class="stats-box">
+      <h2>Character stats</h2>
+      <div class="stat-line">Level: {{ profile.level || 0 }}</div>
+      <div class="stat-line">
+        Experience: {{ profile.experience }} /
+        {{ profile.level * 40 || 0 }}
+      </div>
+      <div v-if="profile.total_stats">
+        <div v-for="[key, value] in filteredStats" :key="key" class="stat-line">
+          <template v-if="key === 'hp'">
+            {{ statLabels[key] || key }}: {{ current_hp }}/{{ value }}
+          </template>
+          <template v-else>
+            {{ statLabels[key] || key }}: {{ value }}
+          </template>
         </div>
       </div>
     </div>
-    <div>gold: {{ profile.gold }}🟡</div>
-    <!-- Secțiunea de inventar -->
-    <div class="inventory-grid">
-      <div
-        v-for="(item, idx) in gridInventory"
-        :key="idx"
-        class="inventory-item"
-      >
-        <template v-if="item">
-          <div class="tooltip-container">
-            <img
-              :src="generateImageName(item.item.name, item.item.rarity)"
-              :alt="item.name"
-              class="item-icon"
-              @error="
-                (e) =>
-                  (e.target.src = generateImageName('default-item-icon', ''))
-              "
-            />
-            <div class="custom-tooltip">
-              <div class="tt-font-name" :class="`rarity-${item.item.rarity}`">
-                {{ item.item.name }}
-              </div>
-              <div class="tt-font">
-                Required Level: {{ item.item.required_level }}
-              </div>
-              <div class="tt-font">Sell: {{ item.item.required_gold }} 🟡</div>
-              <div
-                class="tt-stats"
-                v-if="item.item.stats && item.item.stats.length"
-              >
-                Stats:
-                <div
-                  v-for="(stat, sidx) in item.item.stats"
-                  :key="sidx"
-                  class="tt-stat"
-                >
-                  {{ statLabels[stat.name] || stat.name }}:
-                  <span>
-                    {{
-                      ["crit_rate", "hit_rate", "lifesteal"].includes(stat.name)
-                        ? stat.value + "%"
-                        : stat.value
-                    }}
-                  </span>
-                </div>
+    <div class="add-stats-box">
+      <h2>Add stat points</h2>
+      <div v-if="profile.stats" class="stat-points-container">
+        <div class="stat-upgrade">
+          <span>Strength</span>
+          <span> Cost: {{ str_cost }} 🟡 </span>
+          <button @click="upgradeStat('strength')">+</button>
+        </div>
+        <div class="stat-upgrade">
+          <span>Dexterity</span>
+          <span> Cost: {{ dex_cost }} 🟡 </span>
+          <button @click="upgradeStat('dexterity')">+</button>
+        </div>
+        <div class="stat-upgrade">
+          <span>Intelligence</span>
+          <span> Cost: {{ int_cost }} 🟡 </span>
+          <button @click="upgradeStat('inteligence')">+</button>
+        </div>
+        <div class="stat-upgrade">
+          <span>HP</span>
+          <span> Cost: {{ hp_cost }} 🟡 </span>
+          <button @click="upgradeStat('hp')">+</button>
+        </div>
+      </div>
+      <div v-else>No stat points available</div>
+    </div>
+    </div> 
+  </div>
+  <div>gold: {{ profile.gold }}🟡</div>
+  <!-- Secțiunea de inventar -->
+  <div class="inventory-grid">
+    <div v-for="item in gridInventory" class="inventory-item">
+      <template v-if="item">
+        <div class="tooltip-container">
+          <img :src="generateImageName(item.item.name, item.item.rarity)" :alt="item.name" class="item-icon" @error="
+              (e) =>
+                (e.target.src = generateImageName('default-item-icon', ''))
+            " />
+          <div class="custom-tooltip">
+            <div class="tt-font-name" :class="`rarity-${item.item.rarity}`">
+              {{ item.item.name }}
+            </div>
+            <div class="tt-font">
+              Required Level: {{ item.item.required_level }}
+            </div>
+            <div class="tt-font">Sell: {{ item.item.required_gold }} 🟡</div>
+            <div class="tt-stats" v-if="item.item.stats && item.item.stats.length">
+              Stats:
+              <div v-for="(stat, sidx) in item.item.stats" :key="sidx" class="tt-stat">
+                {{ statLabels[stat.name] || stat.name }}:
+                <span>
+                  {{
+                  ["crit_rate", "hit_rate", "lifesteal"].includes(stat.name)
+                  ? stat.value + "%"
+                  : stat.value
+                  }}
+                </span>
               </div>
             </div>
-            <div class="item-quantity">{{ formatQuantity(item.quantity) }}</div>
-            <button class="inventory-action-btn" @click="equipItem(item.id)">
-              Equip
-            </button>
           </div>
-        </template>
-        <template v-else>
-          <div class="item-icon" style="opacity: 0.2">Empty</div>
-        </template>
-      </div>
+          <div class="item-quantity">{{ formatQuantity(item.quantity) }}</div>
+          <button class="inventory-action-btn" @click="equipItem(item.id)">
+            Equip
+          </button>
+        </div>
+      </template>
+      <template v-else>
+        <div class="item-icon" style="opacity: 0.2">Empty</div>
+      </template>
     </div>
   </div>
+    </div>
 </template>
 
 <style scoped>
@@ -329,22 +377,27 @@ const filteredStats = computed(() => {
   grid-row: 1 / span 4;
   align-self: middle;
 }
+
 .helmet-slot {
   grid-column: 2;
   grid-row: 1;
 }
+
 .armor-slot {
   grid-column: 2;
   grid-row: 2 / span 2;
 }
+
 .leggings-slot {
   grid-column: 2;
   grid-row: 4 / span 2;
 }
+
 .boots-slot {
   grid-column: 2;
   grid-row: 6;
 }
+
 .gloves-slot {
   grid-column: 3;
   grid-row: 1 / span 4;
@@ -362,6 +415,7 @@ const filteredStats = computed(() => {
   background: transparent;
   border-radius: 0.4rem;
 }
+
 .placeholder-slot-bigger-slot {
   width: 90px;
   height: 150px;
@@ -516,28 +570,36 @@ const filteredStats = computed(() => {
   color: #ccc;
   margin-bottom: 0.25rem;
 }
+
 .rarity-common {
   color: #fff;
 }
+
 .rarity-uncommon {
   color: #4caf50;
 }
+
 .rarity-rare {
   color: #2196f3;
 }
+
 .rarity-epic {
   color: #9c27b0;
 }
+
 .rarity-legendary {
   color: #ff9800;
 }
+
 .tt-stats {
   margin-top: 0.5rem;
 }
+
 .tt-stat {
   font-size: 0.85rem;
   color: #b3e5fc;
 }
+
 .tt-value {
   color: gold;
   font-size: 0.9rem;
@@ -569,16 +631,19 @@ const filteredStats = computed(() => {
   .main {
     padding: 1vw 0.5vw;
   }
+
   .top-section {
     flex-direction: column;
     gap: 2vw;
   }
+
   .left-panel,
   .right-panel {
     min-width: 0;
     width: 100%;
     margin-bottom: 1vw;
   }
+
   .inventory-grid {
     grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
     gap: 0.5rem;
@@ -589,20 +654,24 @@ const filteredStats = computed(() => {
   .main {
     padding: 0.5rem 0.2rem;
   }
+
   .inventory-grid {
     grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
     gap: 0.4rem;
   }
+
   .inventory-item {
     min-width: 50px;
     min-height: 50px;
     font-size: 0.8rem;
     padding: 0.4rem;
   }
+
   .item-icon {
     width: 40px;
     height: 40px;
   }
+
   .placeholder-slot {
     width: 60px;
     height: 60px;
@@ -615,11 +684,13 @@ const filteredStats = computed(() => {
     padding: 0.2rem 0.1rem;
     border-radius: 0;
   }
+
   .top-section {
     flex-direction: column;
     gap: 1rem;
     height: auto;
   }
+
   .left-panel,
   .right-panel {
     width: 100%;
@@ -627,20 +698,24 @@ const filteredStats = computed(() => {
     padding: 0.5rem;
     border-width: 1px;
   }
+
   .equipment-box {
     gap: 0.2rem;
   }
+
   .placeholder-slot {
     width: 40px;
     height: 40px;
     font-size: 0.8rem;
     margin-bottom: 0.5rem;
   }
+
   .inventory-grid {
     grid-template-columns: repeat(auto-fit, minmax(40px, 1fr));
     gap: 0.2rem;
     margin-top: 0.5rem;
   }
+
   .inventory-item {
     min-width: 30px;
     min-height: 30px;
@@ -649,11 +724,13 @@ const filteredStats = computed(() => {
     height: 40px;
     width: 100%;
   }
+
   .item-icon {
     width: 24px;
     height: 24px;
     margin-bottom: 0.2rem;
   }
+
   .custom-tooltip {
     min-width: 90px;
     font-size: 0.7rem;
