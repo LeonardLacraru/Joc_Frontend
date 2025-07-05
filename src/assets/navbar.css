@@ -28,5 +28,5 @@ li a:hover {
   justify-content: flex-start;
   background-color: #f1f1f1;
   padding-top: 1.25rem; /* 20px */
-  box-shadow: -0.125rem 0 0.5rem rgba(0,0,0,0.05); /* -2px 0 8px */
+  box-shadow: -0.125rem 0 0.5rem rgba(0, 0, 0, 0.05); /* -2px 0 8px */
 }

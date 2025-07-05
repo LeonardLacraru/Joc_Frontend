@@ -1,40 +1,46 @@
 <script setup>
-import { onMounted, ref, provide, watchEffect } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import './assets/navbar.css'
+import { onMounted, ref, provide, watchEffect } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import "./assets/navbar.css";
 
-const isLoggedIn = ref(false)
-provide('isLoggedIn', isLoggedIn)
-const route = useRoute()
-const router = useRouter()
+const isLoggedIn = ref(false);
+provide("isLoggedIn", isLoggedIn);
+
+// Check localStorage on app load
+if (localStorage.getItem("access")) {
+  isLoggedIn.value = true;
+}
+
+const route = useRoute();
+const router = useRouter();
 
 watchEffect(() => {
-  const noNavbarRoutes = ['/login', '/register']
+  const noNavbarRoutes = ["/login", "/register"];
   if (noNavbarRoutes.includes(route.path)) {
-    document.body.classList.add('no-navbar')
+    document.body.classList.add("no-navbar");
   } else {
-    document.body.classList.remove('no-navbar')
+    document.body.classList.remove("no-navbar");
   }
-})
+});
 
 function logout() {
-  isLoggedIn.value = false
-  localStorage.removeItem('access')
-  localStorage.removeItem('refresh')
-  router.replace('/')
+  isLoggedIn.value = false;
+  localStorage.removeItem("access");
+  localStorage.removeItem("refresh");
+  router.replace("/");
 }
 </script>
 
 <template>
   <ul v-if="!['/login', '/register'].includes(route.path)" class="vertical">
     <li v-if="!isLoggedIn"><router-link to="/login">Login</router-link></li>
-    <li v-if="!isLoggedIn"><router-link to="/register">Register</router-link></li>
-    <li v-if="isLoggedIn"><router-link to="/shop">Shop</router-link></li>
+    <li v-if="!isLoggedIn">
+      <router-link to="/register">Register</router-link>
+    </li>
+    <!-- <li v-if="isLoggedIn"><router-link to="/shop">Shop</router-link></li> -->
     <li v-if="isLoggedIn"><router-link to="/profile">Profile</router-link></li>
-    <li v-if="isLoggedIn"><router-link to="/inventory">Inventory</router-link></li>
-    <li v-if="isLoggedIn"><router-link to="/about">About</router-link></li>
+    <!-- <li v-if="isLoggedIn"><router-link to="/about">About</router-link></li> -->
     <li v-if="isLoggedIn"><a href="#" @click.prevent="logout">Logout</a></li>
   </ul>
   <router-view />
 </template>
-
