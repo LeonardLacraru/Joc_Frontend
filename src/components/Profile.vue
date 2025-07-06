@@ -15,6 +15,7 @@ const str_cost = ref(0);
 const dex_cost = ref(0);
 const int_cost = ref(0);
 const hp_cost = ref(0);
+const showSidebar = ref(false);
 const equippedItems = ref([]);
 const statLabels = {
   crit_dmg: "Critical Damage",
@@ -89,25 +90,25 @@ async function upgradeStat(stat_name) {
   }
 }
 
-async function heal(){
-try{
-  const response = await authFetch(`${API_BASE_URL}/heal/`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-  });
-  if(response.ok){
-    await fetchProfile(); // Refresh profile after healing
-    console.log("Healed successfully:");
-    return null;
-  } else {
-    const errData = await response.json();
-    alert(errData.detail || JSON.stringify(errData));
+async function heal() {
+  try {
+    const response = await authFetch(`${API_BASE_URL}/heal/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    });
+    if (response.ok) {
+      await fetchProfile(); // Refresh profile after healing
+      console.log("Healed successfully:");
+      return null;
+    } else {
+      const errData = await response.json();
+      alert(errData.detail || JSON.stringify(errData));
+    }
   }
-}
-catch (err) {
-  alert(err.message);
-  return err.message;
-}
+  catch (err) {
+    alert(err.message);
+    return err.message;
+  }
 }
 async function getStatsCost() {
   try {
@@ -196,6 +197,19 @@ const filteredStats = computed(() => {
   );
 });
 
+const filteredTotalStats = computed(() => {
+  if (!profile.value.total_stats) return [];
+  return Object.entries(profile.value.total_stats).filter(
+    ([k]) =>
+      ![
+        "strength",
+        "dexterity",
+        "inteligence",
+        "hp",
+      ].includes(k)
+  );
+});
+
 const equippedByType = computed(() => {
   const mapping = {};
   for (const item of equippedItems.value) {
@@ -213,15 +227,31 @@ const equippedByType = computed(() => {
     <div class="top-section">
       <!-- Stânga sus: echipamente și statistici -->
       <div class="left-panel">
+        <div class="sidebar-dropdown">
+          <button class="sidebar-toggle" @click="showSidebar = !showSidebar">
+            ⮜
+          </button>
+          <div class="sidebar-content" v-if="showSidebar">
+            <h3>Total Stats</h3>
+            <div v-for="[key, value] in filteredTotalStats" :key="key" class="stat-line">
+              <template v-if="key === 'hp'">
+                {{ statLabels[key] || key }}: {{ current_hp }}/{{ value }}
+              </template>
+              <template v-else>
+                {{ statLabels[key] || key }}: {{ value }}
+              </template>
+            </div>
+          </div>
+        </div>
         <div class="equipment-box">
           <div v-for="slot in equipmentSlots" :key="slot.type"
             :class="['placeholder-slot', slot.class, { 'placeholder-slot-bigger-slot': slot.big }]">
             <template v-if="equippedByType[slot.type]">
               <div class="tooltip-container">
                 <img :src="generateImageName(
-            equippedByType[slot.type].item.name,
-            equippedByType[slot.type].item.rarity
-            )" class="item-icon" :alt="equippedByType[slot.type].item.name" @error="handleImageError" />
+                  equippedByType[slot.type].item.name,
+                  equippedByType[slot.type].item.rarity
+                )" class="item-icon" :alt="equippedByType[slot.type].item.name" @error="handleImageError" />
                 <div class="custom-tooltip">
                   <div class="tt-font-name" :class="`rarity-${equippedByType[slot.type].item.rarity}`">
                     {{ equippedByType[slot.type].item.name }}
@@ -238,9 +268,9 @@ const equippedByType = computed(() => {
                       {{ statLabels[stat.name] || stat.name }}:
                       <span>
                         {{
-                        ['crit_rate', 'hit_rate', 'lifesteal'].includes(stat.name)
-                        ? stat.value + '%'
-                        : stat.value
+                          ['crit_rate', 'hit_rate', 'lifesteal'].includes(stat.name)
+                            ? stat.value + '%'
+                            : stat.value
                         }}
                       </span>
                     </div>
@@ -254,96 +284,97 @@ const equippedByType = computed(() => {
           </div>
         </div>
       </div>
-  <!-- Dreapta sus: Add stat points -->
-  <div class="right-panel">
-    <div class="stats-box">
-      <h2>Character stats</h2>
-      <div class="stat-line">Level: {{ profile.level || 0 }}</div>
-      <div class="stat-line">
-        Experience: {{ profile.experience }} /
-        {{ profile.level * 40 || 0 }}
-      </div>
-      <button @click="heal">Heal</button>
-      <div v-if="profile.total_stats">
-        <div v-for="[key, value] in filteredStats" :key="key" class="stat-line">
-          <template v-if="key === 'hp'">
-            {{ statLabels[key] || key }}: {{ current_hp }}/{{ value }}
-          </template>
-          <template v-else>
-            {{ statLabels[key] || key }}: {{ value }}
-          </template>
-        </div>
-      </div>
-    </div>
-    <div class="add-stats-box">
-      <h2>Add stat points</h2>
-      <div v-if="profile.stats" class="stat-points-container">
-        <div class="stat-upgrade">
-          <span>Strength</span>
-          <span> Cost: {{ str_cost }} 🟡 </span>
-          <button @click="upgradeStat('strength')">+</button>
-        </div>
-        <div class="stat-upgrade">
-          <span>Dexterity</span>
-          <span> Cost: {{ dex_cost }} 🟡 </span>
-          <button @click="upgradeStat('dexterity')">+</button>
-        </div>
-        <div class="stat-upgrade">
-          <span>Intelligence</span>
-          <span> Cost: {{ int_cost }} 🟡 </span>
-          <button @click="upgradeStat('inteligence')">+</button>
-        </div>
-        <div class="stat-upgrade">
-          <span>HP</span>
-          <span> Cost: {{ hp_cost }} 🟡 </span>
-          <button @click="upgradeStat('hp')">+</button>
-        </div>
-      </div>
-      <div v-else>No stat points available</div>
-    </div>
-    </div> 
-  </div>
-  <div>gold: {{ profile.gold }}🟡</div>
-  <!-- Secțiunea de inventar -->
-  <div class="inventory-grid">
-    <div v-for="item in gridInventory" class="inventory-item">
-      <template v-if="item">
-        <div class="tooltip-container">
-          <img :src="generateImageName(item.item.name, item.item.rarity)" :alt="item.name" class="item-icon" @error="handleImageError" />
-          <div class="custom-tooltip">
-            <div class="tt-font-name" :class="`rarity-${item.item.rarity}`">
-              {{ item.item.name }}
-            </div>
-            <div class="tt-font">
-              Required Level: {{ item.item.required_level }}
-            </div>
-            <div class="tt-font">Sell: {{ item.item.required_gold }} 🟡</div>
-            <div class="tt-stats" v-if="item.item.stats && item.item.stats.length">
-              Stats:
-              <div v-for="(stat, sidx) in item.item.stats" :key="sidx" class="tt-stat">
-                {{ statLabels[stat.name] || stat.name }}:
-                <span>
-                  {{
-                  ["crit_rate", "hit_rate", "lifesteal"].includes(stat.name)
-                  ? stat.value + "%"
-                  : stat.value
-                  }}
-                </span>
-              </div>
+      <!-- Dreapta sus: Add stat points -->
+      <div class="right-panel">
+        <div class="stats-box">
+          <h2>Character stats</h2>
+          <div class="stat-line">Level: {{ profile.level || 0 }}</div>
+          <div class="stat-line">
+            Experience: {{ profile.experience }} /
+            {{ profile.level * 40 || 0 }}
+          </div>
+          <button @click="heal">Heal</button>
+          <div v-if="profile.total_stats">
+            <div v-for="[key, value] in filteredStats" :key="key" class="stat-line">
+              <template v-if="key === 'hp'">
+                {{ statLabels[key] || key }}: {{ current_hp }}/{{ value }}
+              </template>
+              <template v-else>
+                {{ statLabels[key] || key }}: {{ value }}
+              </template>
             </div>
           </div>
-          <div class="item-quantity">{{ formatQuantity(item.quantity) }}</div>
-          <button class="inventory-action-btn" @click="equipItem(item.id)">
-            Equip
-          </button>
         </div>
-      </template>
-      <template v-else>
-        <div class="item-icon" style="opacity: 0.2">Empty</div>
-      </template>
+        <div class="add-stats-box">
+          <h2>Add stat points</h2>
+          <div v-if="profile.stats" class="stat-points-container">
+            <div class="stat-upgrade">
+              <span>Strength</span>
+              <span> Cost: {{ str_cost }} 🟡 </span>
+              <button @click="upgradeStat('strength')">+</button>
+            </div>
+            <div class="stat-upgrade">
+              <span>Dexterity</span>
+              <span> Cost: {{ dex_cost }} 🟡 </span>
+              <button @click="upgradeStat('dexterity')">+</button>
+            </div>
+            <div class="stat-upgrade">
+              <span>Intelligence</span>
+              <span> Cost: {{ int_cost }} 🟡 </span>
+              <button @click="upgradeStat('inteligence')">+</button>
+            </div>
+            <div class="stat-upgrade">
+              <span>HP</span>
+              <span> Cost: {{ hp_cost }} 🟡 </span>
+              <button @click="upgradeStat('hp')">+</button>
+            </div>
+          </div>
+          <div v-else>No stat points available</div>
+        </div>
+      </div>
+    </div>
+    <div>gold: {{ profile.gold }}🟡</div>
+    <!-- Secțiunea de inventar -->
+    <div class="inventory-grid">
+      <div v-for="item in gridInventory" class="inventory-item">
+        <template v-if="item">
+          <div class="tooltip-container">
+            <img :src="generateImageName(item.item.name, item.item.rarity)" :alt="item.name" class="item-icon"
+              @error="handleImageError" />
+            <div class="custom-tooltip">
+              <div class="tt-font-name" :class="`rarity-${item.item.rarity}`">
+                {{ item.item.name }}
+              </div>
+              <div class="tt-font">
+                Required Level: {{ item.item.required_level }}
+              </div>
+              <div class="tt-font">Sell: {{ item.item.required_gold }} 🟡</div>
+              <div class="tt-stats" v-if="item.item.stats && item.item.stats.length">
+                Stats:
+                <div v-for="(stat, sidx) in item.item.stats" :key="sidx" class="tt-stat">
+                  {{ statLabels[stat.name] || stat.name }}:
+                  <span>
+                    {{
+                      ["crit_rate", "hit_rate", "lifesteal"].includes(stat.name)
+                        ? stat.value + "%"
+                        : stat.value
+                    }}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div class="item-quantity">{{ formatQuantity(item.quantity) }}</div>
+            <button class="inventory-action-btn" @click="equipItem(item.id)">
+              Equip
+            </button>
+          </div>
+        </template>
+        <template v-else>
+          <div class="item-icon" style="opacity: 0.2">Empty</div>
+        </template>
+      </div>
     </div>
   </div>
-    </div>
 </template>
 
 <style scoped>
@@ -381,6 +412,41 @@ const equippedByType = computed(() => {
   padding: 1vw;
   background: transparent;
   border-radius: 0.7rem;
+}
+
+.sidebar-dropdown {
+  position: absolute;
+  top: 2vh;
+  left: 0;
+  z-index: 100;
+}
+
+.sidebar-toggle {
+  background-color: #80e34d;
+  border: none;
+  padding: 0.6rem 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  border-radius: 0 10px 10px 0;
+  transition: background 0.3s;
+}
+
+.sidebar-toggle:hover {
+  background-color: #a8f86c;
+}
+
+.sidebar-content {
+  position: absolute;
+  top: 0;
+  right: 100%;
+  width: 260px;
+  background-color: #111;
+  color: #fff;
+  border: 2px solid #ffe600;
+  border-left: none;
+  padding: 1rem;
+  border-radius: 0 10px 10px 0;
+  box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.4);
 }
 
 .equipment-box {
