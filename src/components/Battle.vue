@@ -1,9 +1,11 @@
 <script setup>
 import { authFetch } from "../utils/authFetch.js";
-import { ref } from "vue";
+import { ref, computed } from "vue";
 
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const battle_data = ref(null);
+const expanded = ref({});
 
 async function startBattle(selectedDifficulty) {
     const payload ={ 
@@ -16,31 +18,142 @@ async function startBattle(selectedDifficulty) {
         body: JSON.stringify(payload),
         });
    
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(`Error: ${errorData.detail || 'Failed to start battle'}`);
-    }else{
+    if (response.ok) {
         const data = await response.json();
-        console.log("Battle started successfully:", data);
+        battle_data.value = data;
+        console.log("Battle started successfully:", battle_data.value);
+    }else{
+        const errData = await response.json();
+        alert(errData.detail || JSON.stringify(errData));
         // Handle successful battle start, e.g., navigate to battle details page
         }
-    } catch (error) {
-        console.error("Error starting battle:", error);
-        // Handle error, e.g., show an error message to the user
-    }
-
+    } 
+  catch (err) {
+    alert(err.message);
+    return err.message;
+  }
 }
+
+function toggle(section) {
+  expanded.value[section] = !expanded.value[section]
+}
+
+const filteredRounds = computed(() => {
+  if (!battle_data.value) return {};
+  return Object.fromEntries(
+    Object.entries(battle_data.value).filter(([key]) => !isNaN(Number(key)))
+  );
+});
 
 </script>
 
 <template>
-    <div class="battle-container">
-        <h1>Battle</h1>
-        <p>Welcome to the battle page!</p>
-        <p>Here you can engage in battles with other players.</p>
-        <button @click="startBattle('easy')">Start Easy Battle</button>
-        <button @click="startBattle('medium')">Start Medium Battle</button>
-        <button @click="startBattle('hard')">Start Hard Battle</button>
-    </div>
+  <div class="battle-container">
+    <button @click="startBattle('easy')">Start Easy Battle</button>
+    <button @click="startBattle('medium')">Start Medium Battle</button>
+    <button @click="startBattle('hard')">Start Hard Battle</button>
+  </div>
+  <div v-if="battle_data" class ="battle-data">
+    <p><strong>🏆 Winner: {{ battle_data.winner }}</strong></p>
+    <h2>Rundele bătăliei:</h2>
+    <div v-for="(roundData, roundKey) in filteredRounds" :key="roundKey">
+      <h3>Round: {{ roundData.Round }}</h3>
+      <button @click="toggle(roundKey)">Detalii rundă</button>
 
+      <div v-if="expanded[roundKey]">
+        <button @click="toggle(roundKey + '-player')">Player</button>
+        <ul v-if="expanded[roundKey + '-player']">
+          <li v-for="(val, key) in roundData.Player" :key="key">
+            <strong>{{ key }}:</strong> {{ val }}
+          </li>
+        </ul>
+
+        <button @click="toggle(roundKey + '-npc')">NPC</button>
+        <ul v-if="expanded[roundKey + '-npc']">
+          <li v-for="(val, key) in roundData.NPC" :key="key">
+            <strong>{{ key }}:</strong> {{ val }}
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+   <!-- <div class = "battle-data">
+    <h2>Rundele bătăliei:</h2>
+    <h2>iasjisjad</h2>
+    <h2>iasjisjad</h2>
+    <h2>iasjisjad</h2>
+    <h2>iasjisjad</h2>
+    <h2>iasjisjad</h2>
+    <h2>iasjisjad</h2>
+    <h2>iasjisjad</h2>
+    <h2>iasjisjad</h2>
+  </div>"  -->
 </template>
+
+<style scoped>
+.battle-data {
+  display: flex;
+  flex-direction: column;
+  margin-top: 20px;
+  background-color: black;
+  max-height: 500px;
+  overflow: auto;
+  width: 1500px;
+}
+.details {
+  margin-top: 15px;
+  padding: 15px;
+  border-left: 3px solid #0077cc;
+  background-color: #f4faff;
+  border-radius: 8px;
+}
+
+button {
+  display: inline-block;
+  margin: 8px 0;
+  background-color: #0077cc;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-weight: bold;
+  border-radius: 6px;
+  transition: background-color 0.2s ease;
+}
+
+button:hover {
+  background-color: #005fa3;
+}
+
+ul {
+  margin: 12px 0 16px 0;
+  padding: 12px;
+  background-color: #ffffff;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  max-height: 200px;
+  width: 980px;
+  overflow-y: auto;
+  font-family: monospace;
+  font-size: 14px;
+  color: #222;
+  list-style-type: none;
+}
+
+li {
+  padding: 6px 8px;
+  border-bottom: 1px solid #eee;
+  width : 900px;
+}
+
+li:last-child {
+  border-bottom: none;
+}
+
+strong {
+  color: #0077cc;
+  font-weight: bold;
+  font-size: 18px;
+}
+
+</style>
