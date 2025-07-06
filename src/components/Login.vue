@@ -30,7 +30,7 @@ async function handleLogin(e) {
     localStorage.setItem("refresh", data.refresh);
     localStorage.setItem("username", username.value);
     isLoggedIn.value = true;
-    router.push("/"); // Redirect to x page after successful login
+    router.push("/profile"); // Redirect to x page after successful login
   } else {
     if (data.detail) {
       alert(data.detail);
