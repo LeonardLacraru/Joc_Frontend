@@ -39,7 +39,7 @@ function logout() {
     </li>
     <!-- <li v-if="isLoggedIn"><router-link to="/shop">Shop</router-link></li> -->
     <li v-if="isLoggedIn"><router-link to="/profile">Profile</router-link></li>
-    <!-- <li v-if="isLoggedIn"><router-link to="/about">About</router-link></li> -->
+    <li v-if="isLoggedIn"><router-link to="/battle">Battle</router-link></li>
     <li v-if="isLoggedIn"><a href="#" @click.prevent="logout">Logout</a></li>
   </ul>
   <router-view />
