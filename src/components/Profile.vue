@@ -33,7 +33,7 @@ const equipmentSlots = [
   { type: "weapon", class: "weapon-slot" },
   { type: "helmet", class: "helmet-slot" },
   { type: "armor", class: "armor-slot", big: true },
-  { type: "leggings", class: "leggings-slot", big: true },
+  { type: "pants", class: "leggings-slot", big: true },
   { type: "boots", class: "boots-slot" },
   { type: "gloves", class: "gloves-slot" },
 ];
@@ -89,6 +89,26 @@ async function upgradeStat(stat_name) {
   }
 }
 
+async function heal(){
+try{
+  const response = await authFetch(`${API_BASE_URL}/heal/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+  });
+  if(response.ok){
+    await fetchProfile(); // Refresh profile after healing
+    console.log("Healed successfully:");
+    return null;
+  } else {
+    const errData = await response.json();
+    alert(errData.detail || JSON.stringify(errData));
+  }
+}
+catch (err) {
+  alert(err.message);
+  return err.message;
+}
+}
 async function getStatsCost() {
   try {
     const response = await authFetch(`${API_BASE_URL}/update_stats/`);
@@ -226,7 +246,7 @@ const equippedByType = computed(() => {
                     </div>
                   </div>
                 </div>
-              </div>>
+              </div>
             </template>
             <template v-else>
               {{ slot.type.charAt(0).toUpperCase() + slot.type.slice(1) }}
@@ -243,6 +263,7 @@ const equippedByType = computed(() => {
         Experience: {{ profile.experience }} /
         {{ profile.level * 40 || 0 }}
       </div>
+      <button @click="heal">Heal</button>
       <div v-if="profile.total_stats">
         <div v-for="[key, value] in filteredStats" :key="key" class="stat-line">
           <template v-if="key === 'hp'">
