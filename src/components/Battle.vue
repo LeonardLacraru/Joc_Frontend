@@ -21,7 +21,7 @@ async function startBattle(selectedDifficulty) {
     if (response.ok) {
         const data = await response.json();
         battle_data.value = data;
-        if (typeof battle_data.value === 'dictionary'){
+        if (typeof battle_data.value === 'object'){
           console.log("Battle started successfully:", battle_data.value);}
         else {
           alert(battle_data.value);
@@ -76,7 +76,7 @@ async function heal() {
     <button @click="startBattle('medium')">Start Medium Battle</button>
     <button @click="startBattle('hard')">Start Hard Battle</button>
   </div>
-  <div v-if="battle_data && typeof battle_data === 'dictionary'  "class ="battle-data">
+  <div v-if="battle_data && typeof battle_data === 'object'  "class ="battle-data">
     <p><strong>🏆 Winner: {{ battle_data.winner }}</strong></p>
     <h2>Rundele bătăliei:</h2>
     <div v-for="(roundData, roundKey) in filteredRounds" :key="roundKey">

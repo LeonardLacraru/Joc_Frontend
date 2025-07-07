@@ -583,12 +583,12 @@ const equippedByType = computed(() => {
 }
 
 .item-icon {
-  width: 4vw;
+  width: 5vw;
   height: 4vw;
-  max-width: 70px;
-  max-height: 70px;
-  min-width: 36px;
-  min-height: 36px;
+  max-width: 90px;
+  max-height: 90px;
+  min-width: 50px;
+  min-height: 50px;
   margin-bottom: 0.5rem;
 }
 
