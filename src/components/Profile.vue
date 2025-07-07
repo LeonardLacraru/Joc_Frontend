@@ -110,6 +110,7 @@ async function heal() {
     return err.message;
   }
 }
+
 async function getStatsCost() {
   try {
     const response = await authFetch(`${API_BASE_URL}/update_stats/`);
@@ -149,6 +150,28 @@ async function equipItem(itemId) {
       `${API_BASE_URL}/inventory/equip/${itemId}/`,
       {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+    if (response.ok) {
+      console.log("Item equipped successfully");
+      await fetchProfile(); // Refresh profile after equipping
+    } else {
+      const errData = await response.json();
+      alert(errData.detail || JSON.stringify(errData));
+    }
+  } catch (err) {
+    alert(err.message);
+    return err.message;
+  }
+}
+
+async function sellItem(itemId) {
+  try {
+    const response = await authFetch(
+      `${API_BASE_URL}/inventory/${itemId}/`,
+      {
+        method: "DELETE",
         headers: { "Content-Type": "application/json" },
       }
     );
@@ -363,10 +386,8 @@ const equippedByType = computed(() => {
                 </div>
               </div>
             </div>
-            <div class="item-quantity">{{ formatQuantity(item.quantity) }}</div>
-            <button class="inventory-action-btn" @click="equipItem(item.id)">
-              Equip
-            </button>
+            <button class="inventory-action-btn" @click="equipItem(item.id)">Equip</button>
+            <button class="inventory-action-btn" @click="sellItem(item.id)">Sell</button>
           </div>
         </template>
         <template v-else>
@@ -464,21 +485,25 @@ const equippedByType = computed(() => {
   grid-column: 1;
   grid-row: 1 / span 4;
   align-self: middle;
+  margin-top: 3rem;
 }
 
 .helmet-slot {
   grid-column: 2;
   grid-row: 1;
+  margin-top:auto
 }
 
 .armor-slot {
   grid-column: 2;
   grid-row: 2 / span 2;
+  margin-top: 4rem;
 }
 
 .leggings-slot {
   grid-column: 2;
   grid-row: 4 / span 2;
+  margin-top: 2rem;
 }
 
 .boots-slot {
@@ -490,11 +515,13 @@ const equippedByType = computed(() => {
   grid-column: 3;
   grid-row: 1 / span 4;
   align-self: middle;
+  margin-top: 3rem;
+  margin-left: 3rem;
 }
 
 .placeholder-slot {
-  width: 90px;
-  height: 90px;
+  width: 150px;
+  height: 120px;
   border: 1px solid rgb(255, 0, 0);
   display: flex;
   align-items: center;
@@ -505,8 +532,8 @@ const equippedByType = computed(() => {
 }
 
 .placeholder-slot-bigger-slot {
-  width: 90px;
-  height: 150px;
+  width: 150px;
+  height: 170px;
   border: 1px solid rgb(255, 0, 0);
   display: flex;
   align-items: center;
@@ -697,17 +724,17 @@ const equippedByType = computed(() => {
 
 .inventory-action-btn {
   display: none;
-  position: absolute;
-  bottom: 8px;
+  position: relative;
+  bottom: 2px;
   right: 8px;
   z-index: 2;
-  padding: 0.3rem 0.7rem;
+  padding: 0.1rem 0.7rem;
   background: #ffe600;
   color: #222;
   border: none;
   border-radius: 0.4rem;
   cursor: pointer;
-  font-size: 0.9rem;
+  font-size: 0.7rem;
 }
 
 .inventory-item:hover .inventory-action-btn {

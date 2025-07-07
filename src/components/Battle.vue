@@ -21,11 +21,14 @@ async function startBattle(selectedDifficulty) {
     if (response.ok) {
         const data = await response.json();
         battle_data.value = data;
-        console.log("Battle started successfully:", battle_data.value);
+        if (typeof battle_data.value === 'dictionary'){
+          console.log("Battle started successfully:", battle_data.value);}
+        else {
+          alert(battle_data.value);
+        }
     }else{
         const errData = await response.json();
         alert(errData.detail || JSON.stringify(errData));
-        // Handle successful battle start, e.g., navigate to battle details page
         }
     } 
   catch (err) {
@@ -45,6 +48,26 @@ const filteredRounds = computed(() => {
   );
 });
 
+async function heal() {
+  try {
+    const response = await authFetch(`${API_BASE_URL}/heal/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    });
+    if (response.ok) {
+      console.log("Healed successfully:");
+      return null;
+    } else {
+      const errData = await response.json();
+      alert(errData.detail || JSON.stringify(errData));
+    }
+  }
+  catch (err) {
+    alert(err.message);
+    return err.message;
+  }
+}
+
 </script>
 
 <template>
@@ -53,7 +76,7 @@ const filteredRounds = computed(() => {
     <button @click="startBattle('medium')">Start Medium Battle</button>
     <button @click="startBattle('hard')">Start Hard Battle</button>
   </div>
-  <div v-if="battle_data" class ="battle-data">
+  <div v-if="battle_data && typeof battle_data === 'dictionary'  "class ="battle-data">
     <p><strong>🏆 Winner: {{ battle_data.winner }}</strong></p>
     <h2>Rundele bătăliei:</h2>
     <div v-for="(roundData, roundKey) in filteredRounds" :key="roundKey">
@@ -76,6 +99,9 @@ const filteredRounds = computed(() => {
         </ul>
       </div>
     </div>
+  </div>
+  <div>
+    <button @click="heal">Heal</button>
   </div>
    <!-- <div class = "battle-data">
     <h2>Rundele bătăliei:</h2>
