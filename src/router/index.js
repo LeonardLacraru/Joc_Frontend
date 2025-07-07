@@ -4,12 +4,15 @@ import Register from "../components/Register.vue";
 import Home from "../components/Home.vue";
 import Profile from "../components/Profile.vue";
 import Battle from "../components/Battle.vue";
+import Ranking from "../components/Ranking.vue"; 
+
 const routes = [
   { path: "/", component: Home },
   { path: "/login", component: Login },
   { path: "/register", component: Register },
   { path: "/profile", component: Profile },
-  { path: "/battle", component: Battle }, //, meta: { requiresAuth: true } },
+  { path: "/battle", component: Battle },
+  {path : "/ranking", component: Ranking},//, meta: { requiresAuth: true } }
 ];
 
 const router = createRouter({

@@ -6,6 +6,18 @@ import { ref, computed } from "vue";
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const battle_data = ref(null);
 const expanded = ref({});
+const statLabels = {
+  dmg: "Damage given",  
+  hit_rate: "Hit rate",
+  is_hit: "Has been hit?",
+  hp_left: "HP left",
+  regen: "Live regenerated",
+  crit_rate: "Critical rate",
+  crit_dmg: "Critical damage",
+  is_crit: "Hit has been critical?",
+  lifesteal: "Lifesteal",
+  total_hp: "HP left",
+};
 
 async function startBattle(selectedDifficulty) {
     const payload ={ 
@@ -76,44 +88,33 @@ async function heal() {
     <button @click="startBattle('medium')">Start Medium Battle</button>
     <button @click="startBattle('hard')">Start Hard Battle</button>
   </div>
-  <div v-if="battle_data && typeof battle_data === 'object'  "class ="battle-data">
+  <div v-if="battle_data && typeof battle_data === 'object'  " class="battle-data">
     <p><strong>🏆 Winner: {{ battle_data.winner }}</strong></p>
     <h2>Rundele bătăliei:</h2>
     <div v-for="(roundData, roundKey) in filteredRounds" :key="roundKey">
       <h3>Round: {{ roundData.Round }}</h3>
       <button @click="toggle(roundKey)">Detalii rundă</button>
-
-      <div v-if="expanded[roundKey]">
-        <button @click="toggle(roundKey + '-player')">Player</button>
-        <ul v-if="expanded[roundKey + '-player']">
-          <li v-for="(val, key) in roundData.Player" :key="key">
-            <strong>{{ key }}:</strong> {{ val }}
-          </li>
-        </ul>
-
-        <button @click="toggle(roundKey + '-npc')">NPC</button>
-        <ul v-if="expanded[roundKey + '-npc']">
-          <li v-for="(val, key) in roundData.NPC" :key="key">
-            <strong>{{ key }}:</strong> {{ val }}
-          </li>
-        </ul>
-      </div>
+      <table style="width:100%" v-if="expanded[roundKey]">
+        <thead>
+          <tr>
+            <th>Acțiune</th>
+            <th>Player</th>
+            <th>NPC</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(val, key) in roundData.Player" :key="key">
+            <td><strong>{{ statLabels[key]}}</strong></td>            
+              <td><strong>{{ roundData.Player[key]}}<span v-if ="['crit_rate'].includes(key)">%</span></strong></td>
+            <td><strong>{{ roundData.NPC[key] }}<span v-if ="['crit_rate'].includes(key)">%</span></strong></td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </div>
   <div>
     <button @click="heal">Heal</button>
   </div>
-   <!-- <div class = "battle-data">
-    <h2>Rundele bătăliei:</h2>
-    <h2>iasjisjad</h2>
-    <h2>iasjisjad</h2>
-    <h2>iasjisjad</h2>
-    <h2>iasjisjad</h2>
-    <h2>iasjisjad</h2>
-    <h2>iasjisjad</h2>
-    <h2>iasjisjad</h2>
-    <h2>iasjisjad</h2>
-  </div>"  -->
 </template>
 
 <style scoped>
@@ -180,6 +181,16 @@ strong {
   color: #0077cc;
   font-weight: bold;
   font-size: 18px;
+}
+
+table,
+th,
+td {
+    border: 1px solid yellow;
+    background-color: black;
+    color: red;
+    font-size: 20px;
+    text-align: center;
 }
 
 </style>
