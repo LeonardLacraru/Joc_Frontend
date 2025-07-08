@@ -16,7 +16,9 @@ const dex_cost = ref(0);
 const int_cost = ref(0);
 const hp_cost = ref(0);
 const showSidebar = ref(false);
+const showButton = ref(true);
 const equippedItems = ref([]);
+const counter = ref(0);
 const statLabels = {
   crit_dmg: "Critical Damage",
   crit_rate: "Critical Rate",
@@ -176,8 +178,10 @@ async function sellItem(itemId) {
       }
     );
     if (response.ok) {
-      console.log("Item equipped successfully");
-      await fetchProfile(); // Refresh profile after equipping
+      counter.value++;
+      showButton.value = false;
+      await fetchProfile();
+      setTimeout(() => {showButton.value = true}, 0.01)
     } else {
       const errData = await response.json();
       alert(errData.detail || JSON.stringify(errData));
@@ -387,7 +391,7 @@ const equippedByType = computed(() => {
               </div>
             </div>
             <button class="inventory-action-btn" @click="equipItem(item.id)">Equip</button>
-            <button class="inventory-action-btn" @click="sellItem(item.id)">Sell</button>
+            <button class="inventory-action-btn" v-if = "showButton"  @click="sellItem(item.id)">Sell</button>
           </div>
         </template>
         <template v-else>
