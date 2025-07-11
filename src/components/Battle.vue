@@ -2,16 +2,15 @@
 import { authFetch } from "../utils/authFetch.js";
 import { ref, computed } from "vue";
 
-
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const battle_data = ref(null);
 const expanded = ref({});
 const statLabels = {
-  dmg: "Damage given",  
+  dmg: "Damage given",
   hit_rate: "Hit rate",
   is_hit: "Has been hit?",
   hp_left: "HP left",
-  regen: "Live regenerated",
+  regen: "Life regenerated",
   crit_rate: "Critical rate",
   crit_dmg: "Critical damage",
   is_crit: "Hit has been critical?",
@@ -20,29 +19,30 @@ const statLabels = {
 };
 
 async function startBattle(selectedDifficulty) {
-    const payload ={ 
-        difficulty : selectedDifficulty,
-    };
-    try {
-        const response = await authFetch(`${API_BASE_URL}/create_battle/`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-        });
-   
+  const payload = {
+    difficulty: selectedDifficulty,
+  };
+  try {
+    const response = await authFetch(`${API_BASE_URL}/create_battle/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
     if (response.ok) {
-        const data = await response.json();
-        battle_data.value = data;
-        if (typeof battle_data.value === 'object'){
-          console.log("Battle started successfully:", battle_data.value);}
-        else {
-          alert(battle_data.value);
-        }
-    }else{
-        const errData = await response.json();
-        alert(errData.detail || JSON.stringify(errData));
-        }
-    } 
+      const data = await response.json();
+      battle_data.value = data;
+      if (typeof battle_data.value === 'object') {
+        console.log("Battle started successfully:", battle_data.value);
+      }
+      else {
+        alert(battle_data.value);
+      }
+    } else {
+      const errData = await response.json();
+      alert(errData.detail || JSON.stringify(errData));
+    }
+  }
   catch (err) {
     alert(err.message);
     return err.message;
@@ -83,17 +83,20 @@ async function heal() {
 </script>
 
 <template>
-  <div class="battle-container">
+  <div>
     <button @click="startBattle('easy')">Start Easy Battle</button>
     <button @click="startBattle('medium')">Start Medium Battle</button>
     <button @click="startBattle('hard')">Start Hard Battle</button>
   </div>
-  <div v-if="battle_data && typeof battle_data === 'object'  " class="battle-data">
+  <div v-if="battle_data && typeof battle_data === 'object'" class="battle-data">
     <p><strong>🏆 Winner: {{ battle_data.winner }}</strong></p>
     <h2>Rundele bătăliei:</h2>
     <div v-for="(roundData, roundKey) in filteredRounds" :key="roundKey">
       <h3>Round: {{ roundData.Round }}</h3>
-      <button @click="toggle(roundKey)">Detalii rundă</button>
+      <button @click="toggle(roundKey)">
+        {{ expanded[roundKey] ? 'Ascunde detalii' : 'Detalii rundă' }}
+      </button>
+      
       <table style="width:100%" v-if="expanded[roundKey]">
         <thead>
           <tr>
@@ -104,9 +107,11 @@ async function heal() {
         </thead>
         <tbody>
           <tr v-for="(val, key) in roundData.Player" :key="key">
-            <td><strong>{{ statLabels[key]}}</strong></td>            
-              <td><strong>{{ roundData.Player[key]}}<span v-if ="['crit_rate'].includes(key)">%</span></strong></td>
-            <td><strong>{{ roundData.NPC[key] }}<span v-if ="['crit_rate'].includes(key)">%</span></strong></td>
+            <td><strong>{{ statLabels[key] }}</strong></td>
+            <td><strong>{{ roundData.Player[key] }}<span v-if="['crit_rate', 'hit_rate'].includes(key)">%</span></strong>
+            </td>
+            <td><strong>{{ roundData.NPC[key] }}<span v-if="['crit_rate', 'hit_rate'].includes(key)">%</span></strong>
+            </td>
           </tr>
         </tbody>
       </table>
@@ -127,6 +132,7 @@ async function heal() {
   overflow: auto;
   width: 1500px;
 }
+
 .details {
   margin-top: 15px;
   padding: 15px;
@@ -170,7 +176,7 @@ ul {
 li {
   padding: 6px 8px;
   border-bottom: 1px solid #eee;
-  width : 900px;
+  width: 900px;
 }
 
 li:last-child {
@@ -186,11 +192,10 @@ strong {
 table,
 th,
 td {
-    border: 1px solid yellow;
-    background-color: black;
-    color: red;
-    font-size: 20px;
-    text-align: center;
+  border: 1px solid yellow;
+  background-color: black;
+  color: red;
+  font-size: 20px;
+  text-align: center;
 }
-
 </style>

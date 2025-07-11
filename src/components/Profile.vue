@@ -295,9 +295,9 @@ const equippedByType = computed(() => {
                       {{ statLabels[stat.name] || stat.name }}:
                       <span>
                         {{
-                          ['crit_rate', 'hit_rate', 'lifesteal'].includes(stat.name)
-                            ? stat.value + '%'
-                            : stat.value
+                        ['crit_rate', 'hit_rate', 'lifesteal'].includes(stat.name)
+                        ? stat.value + '%'
+                        : stat.value
                         }}
                       </span>
                     </div>
@@ -316,10 +316,6 @@ const equippedByType = computed(() => {
         <div class="stats-box">
           <h2>Character stats</h2>
           <div class="stat-line">Level: {{ profile.level || 0 }}</div>
-          <div class="stat-line">
-            Experience: {{ profile.experience }} /
-            {{ profile.level * 40 || 0 }}
-          </div>
           <button @click="heal">Heal</button>
           <div v-if="profile.total_stats">
             <div v-for="[key, value] in filteredStats" :key="key" class="stat-line">
@@ -360,45 +356,56 @@ const equippedByType = computed(() => {
         </div>
       </div>
     </div>
-    <div>gold: {{ profile.gold }}🟡</div>
-    <!-- Secțiunea de inventar -->
-    <div class="inventory-grid">
-      <div v-for="item in gridInventory" class="inventory-item">
-        <template v-if="item">
-          <div class="tooltip-container">
-            <img :src="generateImageName(item.item.name, item.item.rarity)" :alt="item.name" class="item-icon"
-              @error="handleImageError" />
-            <div class="custom-tooltip">
-              <div class="tt-font-name" :class="`rarity-${item.item.rarity}`">
-                {{ item.item.name }}
-              </div>
-              <div class="tt-font">
-                Required Level: {{ item.item.required_level }}
-              </div>
-              <div class="tt-font">Sell: {{ item.item.required_gold }} 🟡</div>
-              <div class="tt-stats" v-if="item.item.stats && item.item.stats.length">
-                Stats:
-                <div v-for="(stat, sidx) in item.item.stats" :key="sidx" class="tt-stat">
-                  {{ statLabels[stat.name] || stat.name }}:
-                  <span>
-                    {{
-                      ["crit_rate", "hit_rate", "lifesteal"].includes(stat.name)
-                        ? stat.value + "%"
-                        : stat.value
-                    }}
-                  </span>
-                </div>
-              </div>
-            </div>
-            <button class="inventory-action-btn" @click="equipItem(item.id)">Equip</button>
-            <button class="inventory-action-btn" v-if = "showButton"  @click="sellItem(item.id)">Sell</button>
-          </div>
-        </template>
-        <template v-else>
-          <div class="item-icon" style="opacity: 0.2">Empty</div>
-        </template>
+    <div class="stat-line">
+      Experience: {{ profile.experience }} / {{ profile.level * 40 || 0 }}
+      <div class="progress" role="progressbar" aria-valuemin="0" :aria-valuemax="profile.level * 40"
+        :aria-valuenow="profile.experience" style ="height: 1.5rem">
+        <div class="progress-bar bg-success d-flex justify-content-center align-items-center"
+          :style="{ width: `${(profile.experience / (profile.level * 40)) * 100}%` }"
+          style="font-weight: bold; color: black;">
+          {{ Math.floor((profile.experience / (profile.level * 40)) * 100) }}%
+        </div>
       </div>
     </div>
+  <div class="stat-line">gold: {{ profile.gold }}🟡</div>
+  <!-- Secțiunea de inventar -->
+  <div class="inventory-grid">
+    <div v-for="item in gridInventory" class="inventory-item">
+      <template v-if="item">
+        <div class="tooltip-container">
+          <img :src="generateImageName(item.item.name, item.item.rarity)" :alt="item.name" class="item-icon"
+            @error="handleImageError" />
+          <div class="custom-tooltip">
+            <div class="tt-font-name" :class="`rarity-${item.item.rarity}`">
+              {{ item.item.name }}
+            </div>
+            <div class="tt-font">
+              Required Level: {{ item.item.required_level }}
+            </div>
+            <div class="tt-font">Sell: {{ item.item.required_gold }} 🟡</div>
+            <div class="tt-stats" v-if="item.item.stats && item.item.stats.length">
+              Stats:
+              <div v-for="(stat, sidx) in item.item.stats" :key="sidx" class="tt-stat">
+                {{ statLabels[stat.name] || stat.name }}:
+                <span>
+                  {{
+                  ["crit_rate", "hit_rate", "lifesteal"].includes(stat.name)
+                  ? stat.value + "%"
+                  : stat.value
+                  }}
+                </span>
+              </div>
+            </div>
+          </div>
+          <button class="inventory-action-btn" @click="equipItem(item.id)">Equip</button>
+          <button class="inventory-action-btn" v-if="showButton" @click="sellItem(item.id)">Sell</button>
+        </div>
+      </template>
+      <template v-else>
+        <div class="item-icon" style="opacity: 0.2">Empty</div>
+      </template>
+    </div>
+  </div>
   </div>
 </template>
 
@@ -554,6 +561,8 @@ const equippedByType = computed(() => {
   border-radius: 0.4rem;
   margin-bottom: 1vw;
   background: transparent;
+  font-size: 1.5rem;
+  color:white
 }
 
 .inventory-grid {
@@ -582,7 +591,7 @@ const equippedByType = computed(() => {
 }
 
 .inventory-item:hover {
-  transform: scale(1.07);
+  transform: scale(1);
   box-shadow: 0 0 0.625rem #ffcc00;
 }
 
@@ -626,12 +635,13 @@ const equippedByType = computed(() => {
 
 .stat-upgrade button:hover {
   background: #ffe600;
-  color: #000;
+  color: white;
 }
 
 .stat-line {
-  font-size: 0.9rem;
+  font-size: 1.5rem;
   padding: 0.25rem 0;
+  color: white;
 }
 
 .inventory-section {
