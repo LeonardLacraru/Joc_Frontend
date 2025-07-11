@@ -279,7 +279,7 @@ const equippedByType = computed(() => {
                   equippedByType[slot.type].item.name,
                   equippedByType[slot.type].item.rarity
                 )" class="item-icon" :alt="equippedByType[slot.type].item.name" @error="handleImageError" />
-                <div class="custom-tooltip">
+                <div class="custom-tooltip-equipped">
                   <div class="tt-font-name" :class="`rarity-${equippedByType[slot.type].item.rarity}`">
                     {{ equippedByType[slot.type].item.name }}
                   </div>
@@ -415,7 +415,7 @@ const equippedByType = computed(() => {
   max-width: 1200px;
   min-width: 320px;
   min-height: 80vh;
-  margin: 2vw auto;
+  margin: 5vw;
   background: #000;
   position: relative;
   box-sizing: border-box;
@@ -494,9 +494,10 @@ const equippedByType = computed(() => {
 
 .weapon-slot {
   grid-column: 1;
-  grid-row: 1 / span 4;
+  grid-row: 1 / span 5;
   align-self: middle;
   margin-top: 3rem;
+  margin-left: -3rem;
 }
 
 .helmet-slot {
@@ -524,7 +525,7 @@ const equippedByType = computed(() => {
 
 .gloves-slot {
   grid-column: 3;
-  grid-row: 1 / span 4;
+  grid-row: 1 / span 5;
   align-self: middle;
   margin-top: 3rem;
   margin-left: 3rem;
@@ -668,6 +669,25 @@ const equippedByType = computed(() => {
   left: 50%;
   top: -10px;
   transform: translate(-50%, -100%);
+  /* transform: translateX(0, -50%); */
+  background: #222;
+  color: #fff;
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  min-width: 180px;
+  box-shadow: 0 0 10px #000a;
+  font-size: 0.95rem;
+  pointer-events: none;
+  white-space: pre-line;
+}
+
+.custom-tooltip-equipped {
+  display: none;
+  position: absolute;
+  z-index: 1000;
+  left: 50%;
+  top: -10px;
+  transform: translateX(0, -50%);
   background: #222;
   color: #fff;
   border-radius: 0.5rem;
@@ -683,6 +703,9 @@ const equippedByType = computed(() => {
   display: block;
 }
 
+.tooltip-container:hover .custom-tooltip-equipped {
+  display: block;
+}
 .tt-font-name {
   font-weight: bold;
   font-size: 1.05rem;

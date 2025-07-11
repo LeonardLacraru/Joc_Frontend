@@ -1,7 +1,6 @@
 <script setup>
 import { onMounted, ref, provide, watchEffect } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import "./assets/navbar.css";
 
 const isLoggedIn = ref(false);
 provide("isLoggedIn", isLoggedIn);
@@ -32,16 +31,36 @@ function logout() {
 </script>
 
 <template>
-  <ul v-if="!['/login', '/register'].includes(route.path)" class="vertical">
-    <li v-if="!isLoggedIn"><router-link to="/login">Login</router-link></li>
-    <li v-if="!isLoggedIn">
-      <router-link to="/register">Register</router-link>
+<ul
+  v-if="!['/login', '/register'].includes(route.path)"
+  class="nav flex-column position-fixed start-0 top-0 h-100 bg-dark text-white p-3 d-flex justify-content-between"
+  style="width: 120px;"
+>
+  <div>
+    <li class="nav-item" v-if="!isLoggedIn">
+      <router-link class="nav-link text-white" to="/login">Login</router-link>
     </li>
-    <!-- <li v-if="isLoggedIn"><router-link to="/shop">Shop</router-link></li> -->
-    <li v-if="isLoggedIn"><router-link to="/profile">Profile</router-link></li>
-    <li v-if="isLoggedIn"><router-link to="/battle">Battle</router-link></li>
-    <li v-if="isLoggedIn"><router-link to="/ranking">Ranking</router-link></li>
-    <li v-if="isLoggedIn"><a href="#" @click.prevent="logout">Logout</a></li>
-  </ul>
-  <router-view />
+    <li class="nav-item" v-if="!isLoggedIn">
+      <router-link class="nav-link text-white" to="/register">Register</router-link>
+    </li>
+    <li class="nav-item" v-if="isLoggedIn">
+      <router-link class="nav-link text-white" to="/profile">Profile</router-link>
+    </li>
+    <li class="nav-item" v-if="isLoggedIn">
+      <router-link class="nav-link text-white" to="/battle">Battle</router-link>
+    </li>
+    <li class="nav-item" v-if="isLoggedIn">
+      <router-link class="nav-link text-white" to="/ranking">Ranking</router-link>
+    </li>
+  </div>
+
+  <div v-if="isLoggedIn">
+    <li class="nav-item">
+      <a class="nav-link text-danger" href="#" @click.prevent="logout">Logout</a>
+    </li>
+  </div>
+</ul>
+
+<router-view />
+
 </template>
