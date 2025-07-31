@@ -52,6 +52,9 @@ function logout() {
     <li class="nav-item" v-if="isLoggedIn">
       <router-link class="nav-link text-white" to="/ranking">Ranking</router-link>
     </li>
+    <li class="nav-item" v-if="isLoggedIn">
+      <router-link class="nav-link text-white" to="/marketplace">Marketplace</router-link>
+    </li>
   </div>
 
   <div v-if="isLoggedIn">
