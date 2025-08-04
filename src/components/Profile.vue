@@ -248,7 +248,7 @@ const equippedByType = computed(() => {
 </script>
 
 <template>
-  <div class="main">
+  <div class="mainInventory">
     <div class="top-section">
       <!-- Stânga sus: echipamente și statistici -->
       <div class="left-panel">

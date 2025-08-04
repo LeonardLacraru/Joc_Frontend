@@ -2,8 +2,8 @@
 import { authFetch } from "../utils/authFetch.js";
 import { ref, computed, onMounted } from "vue";
 import "../assets/inventory.css";
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const inventory = ref([]);
 const loading = ref(true);
 const SLOT_COUNT = 33;
@@ -199,7 +199,7 @@ async function CancelSell(itemId) {
 </script>
 
 <template>
-  <div class="main">
+  <div class="mainInventory">
     <div class="top-sectionMarket">
       <div class="left-panelMarket">
         <h2 class="tt-stats">Inventory</h2>

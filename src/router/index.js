@@ -7,6 +7,8 @@ import Battle from "../components/Battle.vue";
 import Ranking from "../components/Ranking.vue"; 
 import Attack_player from "@/components/Attack_player.vue";
 import Marketplace from "@/components/Marketplace.vue"; 
+import Guild from "@/components/Guild.vue"; 
+import CreateGuild from "@/components/CreateGuild.vue"; 
 
 const routes = [
   { path: "/", component: Home },
@@ -17,6 +19,8 @@ const routes = [
   {path : "/ranking", component: Ranking},//, meta: { requiresAuth: true } }
   {path: "/PVP", component: Attack_player},
   {path:"/marketplace", component: Marketplace},
+  {path: "/guild", component: Guild },
+  {path: "/create_guild", component: CreateGuild,}
 ];
 
 const router = createRouter({
