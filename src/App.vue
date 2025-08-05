@@ -52,9 +52,9 @@ async function fetchProfile() {
   }
 }
 
-onMounted(() => {
-    fetchProfile();
-});
+// onMounted(() => {
+//     fetchProfile();
+// });
 
 const raceImage = computed(() => {
   if (profile.value?.race) {

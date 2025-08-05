@@ -256,12 +256,13 @@ const equippedByType = computed(() => {
           <div class="sidebar-content" v-if="showSidebar">
             <h2 class ="stats-box">Total Stats</h2>
             <div v-for="[key, value] in filteredTotalStats" :key="key" class="stat-line">
-              <template v-if="key === 'hp'">
-                {{ statLabels[key] || key }}: {{ current_hp }}/{{ value }}
-              </template>
-              <template v-else>
-                {{ statLabels[key] || key }}: {{ value }}
-              </template>
+              {{ statLabels[key] || key }}:
+              {{ key === 'hp'
+                  ? current_hp + '/' + value
+                  : ['lifesteal', 'crit_rate', 'crit_dmg', 'hit_rate'].includes(key)
+                    ? value + '%'
+                    : value
+              }}
             </div>
           </div>
         </div>

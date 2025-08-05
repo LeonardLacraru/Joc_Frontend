@@ -18,7 +18,7 @@ const statLabels = {
   dexterity: "Dexterity",
   hit_rate: "Hit Rate",
   hp: "HP",
-  inteligence: "Intelligence",
+  intelligence: "Intelligence",
   lifesteal: "Lifesteal",
   magic_def: "Magic Defense",
   phys_def: "Physical Defense",
@@ -159,7 +159,6 @@ async function GetListedItems() {
     if (response.ok) {
       const data = await response.json();
       listed_items.value = data || [];
-      console.log("Listed items fetched:", data);
       return null;
     } else {
       const errData = await response.json();
@@ -199,6 +198,7 @@ async function CancelSell(itemId) {
 </script>
 
 <template>
+  <div class ="screen-80">
   <div class="mainInventory">
     <div class="top-section">
       <div class="left-panelMarket">
@@ -333,6 +333,7 @@ async function CancelSell(itemId) {
       </div>
     </div>
   </div>
+  </div>
 </template>
 
 <style scoped>
@@ -354,4 +355,5 @@ async function CancelSell(itemId) {
   background: transparent;
   border-radius: 0.7rem;
 }
+
 </style>
