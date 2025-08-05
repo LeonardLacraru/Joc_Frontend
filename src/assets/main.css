@@ -1,21 +1,25 @@
 @import "./base.css";
 
 #app {
-  max-width: 100rem; /* 1280px */
-  /* padding: 1rem; */
+  max-width: 100rem;
   font-weight: normal;
+  background: #181012; /* dark fantasy background */
+  color: #e7d7b1;     /* muted gold text */
+  font-family: 'Cinzel', serif;
 }
 
 a,
 .green {
   text-decoration: none;
-  color: hsla(160, 100%, 37%, 1);
+  color: #e7d7b1;
   transition: 0.4s;
-  padding: 0.1875rem; /* 3px */
+  padding: 0.1875rem;
+  border-radius: 4px;
 }
 
 @media (hover: hover) {
   a:hover {
-    background-color: hsla(160, 100%, 37%, 0.2);
+    background-color: #2d161a;
+    color: #ffe600;
   }
 }

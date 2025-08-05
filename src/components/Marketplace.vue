@@ -200,7 +200,7 @@ async function CancelSell(itemId) {
 
 <template>
   <div class="mainInventory">
-    <div class="top-sectionMarket">
+    <div class="top-section">
       <div class="left-panelMarket">
         <h2 class="tt-stats">Inventory</h2>
         <div class="inventory-grid">
@@ -350,7 +350,6 @@ async function CancelSell(itemId) {
   flex: 1 1 350px;
   min-width: 280px;
   box-sizing: border-box;
-  border: 1px solid yellow;
   padding: 1vw;
   background: transparent;
   border-radius: 0.7rem;

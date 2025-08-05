@@ -56,8 +56,6 @@ async function fetchProfile() {
       equippedItems.value = data.equipped_items || 0;
       current_hp.value = data.stats.current_hp || 0;
       loading.value = false;
-      console.log("Profile data fetched successfully:", profile.value);
-      console.log("Inventory data fetched successfully:", inventory.value);
       await getStatsCost();
       return null;
     } else {
@@ -242,7 +240,6 @@ const equippedByType = computed(() => {
       mapping[item.item.type] = item;
     }
   }
-  console.log("Equipped items by type:", mapping);
   return mapping;
 });
 </script>

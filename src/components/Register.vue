@@ -26,8 +26,6 @@ async function handleRegister(e) {
     password_confirm: confirmPassword.value,
     race: race.value,
   };
-  console.log("Data sent to Django backend:", payload); // This logs the data to the console
-
   const response = await fetch(`${API_BASE_URL}/register/`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
