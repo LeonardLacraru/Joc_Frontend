@@ -63,7 +63,6 @@ const raceImage = computed(() => {
   if (profile.value?.race) {
     return new URL(`./assets/${profile.value.race}.png`, import.meta.url).href;
   }
-  return "https://github.com/mdo.png";
 });
 
 watch(isLoggedIn, (newVal) => {
@@ -134,7 +133,7 @@ watch(isLoggedIn, (newVal) => {
           height="64"
           class="rounded-circle me-2"
         />
-        <strong>{{ profile?.character_name || 'User' }}</strong>
+        <strong>{{ profile?.character_name }}</strong>
       </a>
       <ul class="dropdown-menu text-small shadow">
         <li>
