@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref, provide, watchEffect, computed} from "vue";
+import { onMounted, ref, provide, watchEffect, computed, watch} from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { authFetch } from "./utils/authFetch";
 
@@ -52,13 +52,7 @@ async function fetchProfile() {
   }
 }
 
-watchEffect(isLoggedIn, (newVal) => {
-  if (newVal) {
-    fetchProfile();
-  } else {
-    profile.value = null;
-  }
-});
+
 
 onMounted(() => {
   if (isLoggedIn.value === true) {
@@ -70,6 +64,14 @@ const raceImage = computed(() => {
     return new URL(`./assets/${profile.value.race}.png`, import.meta.url).href;
   }
   return "https://github.com/mdo.png";
+});
+
+watch(isLoggedIn, (newVal) => {
+  if (newVal) {
+    fetchProfile();
+  } else {
+    profile.value = null;
+  }
 });
 </script>
 
