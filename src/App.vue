@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref, provide, watchEffect, computed } from "vue";
+import { onMounted, ref, provide, watchEffect, computed} from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { authFetch } from "./utils/authFetch";
 
@@ -52,8 +52,16 @@ async function fetchProfile() {
   }
 }
 
+watchEffect(isLoggedIn, (newVal) => {
+  if (newVal) {
+    fetchProfile();
+  } else {
+    profile.value = null;
+  }
+});
+
 onMounted(() => {
-  if (isLoggedIn.value=== true) {
+  if (isLoggedIn.value === true) {
     fetchProfile();
   }
 });

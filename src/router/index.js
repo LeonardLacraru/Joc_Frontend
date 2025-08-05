@@ -14,13 +14,13 @@ const routes = [
   { path: "/", component: Home },
   { path: "/login", component: Login },
   { path: "/register", component: Register },
-  { path: "/profile", component: Profile },
-  { path: "/battle", component: Battle },
-  {path : "/ranking", component: Ranking},//, meta: { requiresAuth: true } }
-  {path: "/PVP", component: Attack_player},
-  {path:"/marketplace", component: Marketplace},
-  {path: "/guild", component: Guild },
-  {path: "/create_guild", component: CreateGuild,}
+  { path: "/profile", component: Profile, meta: { requiresAuth: true } }, // Protected route
+  { path: "/battle", component: Battle, meta: { requiresAuth: true } }, // Protected route
+  {path : "/ranking", component: Ranking , meta:{requiresAuth: true}},//
+  {path: "/PVP", component: Attack_player, meta: { requiresAuth: true } }, // Protected route
+  {path:"/marketplace", component: Marketplace, meta: { requiresAuth: true } }, // Protected route
+  {path: "/guild", component: Guild, meta: { requiresAuth: true } }, // Protected route
+  {path: "/create_guild", component: CreateGuild, meta: { requiresAuth: true } }, // Protected route
 ];
 
 const router = createRouter({
