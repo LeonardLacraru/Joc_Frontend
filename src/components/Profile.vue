@@ -26,7 +26,7 @@ const statLabels = {
   dexterity: "Dexterity",
   hit_rate: "Hit Rate",
   hp: "HP",
-  inteligence: "Intelligence",
+  intelligence: "Intelligence",
   lifesteal: "Lifesteal",
   magic_def: "Magic Defense",
   phys_def: "Physical Defense",
@@ -213,9 +213,9 @@ const filteredStats = computed(() => {
     ([k]) =>
       ![
         "lifesteal",
-        "crit_dmg",
-        "crit_rate",
         "hit_rate",
+        "crit_rate",
+        "crit_dmg",
         "magic_def",
         "phys_def",
       ].includes(k)
@@ -229,7 +229,7 @@ const filteredTotalStats = computed(() => {
       ![
         "strength",
         "dexterity",
-        "inteligence",
+        "intelligence",
         "hp",
       ].includes(k)
   );
@@ -257,7 +257,7 @@ const equippedByType = computed(() => {
             ⮜
           </button>
           <div class="sidebar-content" v-if="showSidebar">
-            <h3>Total Stats</h3>
+            <h2 class ="stats-box">Total Stats</h2>
             <div v-for="[key, value] in filteredTotalStats" :key="key" class="stat-line">
               <template v-if="key === 'hp'">
                 {{ statLabels[key] || key }}: {{ current_hp }}/{{ value }}
@@ -343,7 +343,7 @@ const equippedByType = computed(() => {
             <div class="stat-upgrade">
               <span>Intelligence</span>
               <span> Cost: {{ int_cost }} 🟡 </span>
-              <button @click="upgradeStat('inteligence')">+</button>
+              <button @click="upgradeStat('intelligence')">+</button>
             </div>
             <div class="stat-upgrade">
               <span>HP</span>
@@ -355,11 +355,10 @@ const equippedByType = computed(() => {
         </div>
       </div>
     </div>
-    <div class="stat-line">
+    <div class="stat-line" style="text-align: center;">
       Experience: {{ profile.experience }} / {{ profile.level * 40 || 0 }}
       <div class="progress position-relative" role="progressbar" aria-valuemin="0" :aria-valuemax="profile.level * 40"
         :aria-valuenow="profile.experience" style="height: 1.5rem;">
-
         <!-- Bara verde -->
         <div class="progress-bar bg-success" :style="{ width: `${(profile.experience / (profile.level * 40)) * 100}%` }"
           style="font-weight: bold; color: black;">
@@ -370,7 +369,7 @@ const equippedByType = computed(() => {
         </div>
       </div>
     </div>
-    <div class="stat-line">gold: {{ profile.gold }}🟡</div>
+    <div class="stat-line" style="text-align: center;">gold: {{ profile.gold }}🟡</div>
     <!-- Secțiunea de inventar -->
     <div class="inventory-grid">
       <div v-for="item in gridInventory" class="inventory-item">

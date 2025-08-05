@@ -3,6 +3,8 @@ import { ref, onMounted } from 'vue';
 import { authFetch } from '@/utils/authFetch';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const guildName = ref('');
+const guildDescription = ref('');
 async function createGuild() {
     try {
         const response = await authFetch(`${API_BASE_URL}/guild/create_guild/`, {
@@ -11,14 +13,13 @@ async function createGuild() {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                description: 'Description of the new guild',
-                name: 'New Guild',
+                description: guildDescription.value,
+                name: guildName.value,
             })
         });
         if (response && response.ok) {
             const data = await response.json();
             console.log("Guild created:", data);
-            fetchGuilds(); // Refresh the guild list
         } else {
             const errData = await response.json();
             alert(errData.detail || JSON.stringify(errData));

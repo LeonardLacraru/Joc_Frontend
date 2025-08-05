@@ -1,40 +1,65 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, onMounted } from 'vue';
 import { authFetch } from '../utils/authFetch.js';
 import router from '@/router/index.js';
 import { pvp_battle_data } from '../utils/public_variables.js';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-const ranking = ref(null);
+const rankingType = ref('players'); // 'players' or 'guilds'
+const ranking = ref([]);
+const loading = ref(false);
 
-onMounted(async () => {
-    await fetchRanking();
-});
-
-async function fetchRanking() {
+async function fetchPlayersRanking() {
+    loading.value = true;
     try {
         const response = await authFetch(`${API_BASE_URL}/ranking/`);
         if (response && response.ok) {
-            const data = await response.json();
-            ranking.value = data;
-            console.log("Ranking data:", ranking.value);
-            return data;
+            ranking.value = await response.json();
         } else {
             const errData = await response.json();
             alert(errData.detail || JSON.stringify(errData));
-            return null;
         }
     } catch (err) {
         alert(err.message);
-        return [];
     }
+    loading.value = false;
+}
+
+async function fetchGuildsRanking() {
+    loading.value = true;
+    try {
+        const response = await authFetch(`${API_BASE_URL}/guild/guilds/`);
+        if (response && response.ok) {
+            ranking.value = await response.json();
+        } else {
+            const errData = await response.json();
+            alert(errData.detail || JSON.stringify(errData));
+        }
+    } catch (err) {
+        alert(err.message);
+    }
+    loading.value = false;
+}
+
+// Load players ranking by default
+onMounted(fetchPlayersRanking);
+
+function showPlayers() {
+    rankingType.value = 'players';
+    fetchPlayersRanking();
+}
+
+function showGuilds() {
+    rankingType.value = 'guilds';
+    fetchGuildsRanking();
 }
 
 async function attackPlayer(playerId) {
     try {
         const response = await authFetch(`${API_BASE_URL}/attack_player/${playerId}/`, {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'
+            headers: {
+                'Content-Type': 'application/json'
             }
         });
         if (response && response.ok) {
@@ -53,37 +78,126 @@ async function attackPlayer(playerId) {
 </script>
 
 <template>
-    <div>
-        <table style="width:100%">
-            <thead>
-                Character Ranking
-                <tr>
-                    <th>Rank</th>
-                    <th>Character Name</th>
-                    <th>Level</th>
-                    <th>Race</th>
-                    <th>Action</th>
-                </tr>
-                <tr v-for="(player, index) in ranking" :key="ranking.id">
-                    <td>{{ index + 1 }}</td>
-                    <td>{{ player.character_name }}</td>
-                    <td>{{ player.level }}</td>
-                    <td>{{ player.race }}</td>
-                    <td button class="btn btn-dark px-3" type="button" @click="attackPlayer(player.id)">Attack</td>
-                </tr>
-            </thead>
-        </table>
+    <div class="screen-80">
+        <nav class="navbar navbar-expand-lg bg-body-tertiary navbar bg-dark border-bottom border-body"
+            data-bs-theme="dark">
+            <div class="container-fluid">
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav">
+                        <li class="nav-item">
+                            <button class="btn btn-dark mx-2" @click="showPlayers">Players Ranking</button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="btn btn-dark mx-2" @click="showGuilds">Guilds Ranking</button>
+                        </li>
+                    </ul>
+                    <form class="d-flex ms-auto" role="search">
+                        <input class="form-control me-2" type="search" aria-label="Search" />
+                        <button class="btn btn-outline-success" type="submit">Search</button>
+                    </form>
+                </div>
+            </div>
+        </nav>
+
+        <div v-if="loading">Loading...</div>
+        <div v-if="rankingType === 'players' && ranking.length">
+            <div class="row mb-3 text-center fw-bold">
+                <div class="col-md-2 themed-grid-col">Rank</div>
+                <div class="col-md-3 themed-grid-col">Character Name</div>
+                <div class="col-md-2 themed-grid-col">Level</div>
+                <div class="col-md-3 themed-grid-col">Race</div>
+                <div class="col-md-2 themed-grid-col">Action</div>
+            </div>
+            <div v-for="(player, index) in ranking" :key="player.id" class="row mb-2 text-center align-items-center">
+                <div class="col-md-2 themed-grid-col">{{ index + 1 }}</div>
+                <div class="col-md-3 themed-grid-col">{{ player.character_name }}</div>
+                <div class="col-md-2 themed-grid-col">{{ player.level }}</div>
+                <div class="col-md-3 themed-grid-col">{{ player.race }}</div>
+                <div class="col-md-2 themed-grid-col">
+                    <button class="btn btn-dark px-3" type="button" @click="attackPlayer(player.id)">Attack</button>
+                </div>
+            </div>
+        </div>
+
+        <div v-if="rankingType === 'guilds' && ranking.length">
+            <div class="row mb-3 text-center fw-bold">
+                <div class="col-md-4 themed-grid-col">Nume</div>
+                <div class="col-md-4 themed-grid-col">Leader</div>
+                <div class="col-md-4 themed-grid-col">Level</div>
+            </div>
+            <div v-for="guild in ranking" :key="guild.id" class="row mb-2 text-center">
+                <div class="col-md-4 themed-grid-col">{{ guild.name }}</div>
+                <div class="col-md-4 themed-grid-col">{{ guild.leader }}</div>
+                <div class="col-md-4 themed-grid-col">{{ guild.level }}</div>
+            </div>
+        </div>
     </div>
 </template>
 
 <style scoped>
-table,
-th,
-td {
-    border: 1px solid yellow;
-    background-color: black;
-    color: red;
-    font-size: 30px;
-    text-align: center;
+
+
+.screen-80 {
+    width: 80vw;
+    min-height: 10vh;
+    max-height: 80vh;
+    margin: auto;
+    display: flex;
+    flex-direction: column;
+    background-color: #181012; /* very dark, almost black */
+    overflow-y: auto;
+    overflow-x: hidden; 
+}
+
+.themed-grid-col {
+  color: #e7d7b1; /* muted gold for text */
+  border: 1px solid #2d161a; /* deep muted red-black border */
+  border-radius: 8px;
+  background: linear-gradient(180deg, #22171b 70%, #181012 100%);
+  box-shadow: 0 2px 8px rgba(40, 10, 20, 0.3);
+  padding: 0.7rem 0.2rem;
+  font-family: 'Cinzel', serif;
+  font-size: 1.15rem;
+  font-weight: 500;
+  letter-spacing: 1px;
+  text-shadow: 0 1px 6px #181012;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.row.mb-2.text-center.align-items-center,
+.row.mb-2.text-center {
+  background: linear-gradient(90deg, #22171b 0%, #181012 100%);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  box-shadow: 0 1px 8px rgba(40, 10, 20, 0.2);
+}
+
+.row.mb-3.text-center.fw-bold {
+  background: linear-gradient(90deg, #2d161a 0%, #181012 100%);
+  border-radius: 8px;
+  margin-bottom: 16px;
+  color: #e7d7b1; /* muted gold for header */
+  font-size: 1.2rem;
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-shadow: 0 1px 8px #181012;
+}
+
+.btn-dark {
+  background: linear-gradient(90deg, #2d161a 60%, #181012 100%);
+  color: #e7d7b1;
+  border: 1.5px solid #3a232b;
+  font-family: 'Cinzel', serif;
+  font-size: 1.1rem;
+  letter-spacing: 1px;
+  box-shadow: 0 1px 6px #181012;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.btn-dark:hover {
+  background: linear-gradient(90deg, #3a232b 60%, #2d161a 100%);
+  border-color: #e7d7b1;
+  color: #fffbe6;
 }
 </style>

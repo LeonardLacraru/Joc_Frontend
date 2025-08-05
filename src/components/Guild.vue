@@ -7,7 +7,7 @@ const guild = ref('');
 const loading = ref(true);
 async function fetchGuilds() {
     try {
-        const response = await authFetch(`${API_BASE_URL}/guild/guilds/`);
+        const response = await authFetch(`${API_BASE_URL}/guild/guild/`);
         if (response && response.ok) {
             const data = await response.json();
             guild.value = data || [];
@@ -53,7 +53,14 @@ onMounted(() => {
         <div class="row mb-3 text-center">
             <div class="col-md-4 themed-grid-col">Nume</div>
             <div class="col-md-4 themed-grid-col">Leader</div>
-            <div class="col-md-4 themed-grid-col">Description</div>
+            <div class="col-md-4 themed-grid-col">Level</div>
+        </div>
+        <div v-for="guild in guild" class="row mb-3 text-center">
+            <template v-if="guild">
+                <div class="col-md-4 themed-grid-col">{{guild.name}}</div>
+                <div class="col-md-4 themed-grid-col">{{guild.leader}}</div>
+                <div class="col-md-4 themed-grid-col">{{guild.level}}</div>
+            </template>
         </div>
     </div>
 </template>
@@ -69,6 +76,8 @@ onMounted(() => {
     border: 1px solid #ccc;
 
 }
+
+
 
 nav.navbar {
     width: 100%;

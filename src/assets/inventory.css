@@ -1,10 +1,12 @@
+/* Dark fantasy RPG theme for Profile.vue */
+
 .mainInventory {
   width: 100vw;
   max-width: 1200px;
   min-width: 320px;
   min-height: 80vh;
   margin: 5vw;
-  background: #000;
+  background-color: #181012;
   position: relative;
   box-sizing: border-box;
   border-radius: 1.2rem;
@@ -12,6 +14,8 @@
   flex-direction: column;
   justify-content: flex-start;
   align-items: stretch;
+  color: #e7d7b1;
+  box-shadow: 0 2px 16px rgba(40, 10, 20, 0.4);
 }
 
 .top-section {
@@ -28,10 +32,11 @@
   flex: 1 1 350px;
   min-width: 280px;
   box-sizing: border-box;
-  border: 1px solid yellow;
+  border: 1.5px solid #2d161a;
   padding: 1vw;
-  background: transparent;
+  background: linear-gradient(180deg, #22171b 70%, #181012 100%);
   border-radius: 0.7rem;
+  color: #e7d7b1;
 }
 
 .sidebar-dropdown {
@@ -78,6 +83,7 @@
   align-items: center;
   padding: 0.5rem;
   min-width: 18.75rem;
+  background: none;
 }
 
 .weapon-slot {
@@ -91,7 +97,7 @@
 .helmet-slot {
   grid-column: 2;
   grid-row: 1;
-  margin-top: auto
+  margin-top: auto;
 }
 
 .armor-slot {
@@ -122,36 +128,45 @@
 .placeholder-slot {
   width: 150px;
   height: 120px;
-  border: 1px solid rgb(255, 0, 0);
+  border: 2px solid #6a0f19;
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: 1rem;
-  background: transparent;
+  background: linear-gradient(180deg, #1a0007 70%, #2d0a13 100%);
+  color: #e7d7b1;
   border-radius: 0.4rem;
+  font-family: 'Cinzel', serif;
+  font-size: 1.1rem;
+  box-shadow: 0 2px 8px rgba(120, 10, 30, 0.2);
 }
 
 .placeholder-slot-bigger-slot {
   width: 150px;
   height: 170px;
-  border: 1px solid rgb(255, 0, 0);
+  border: 2px solid #6a0f19;
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: 1rem;
-  background: transparent;
+  background: linear-gradient(180deg, #1a0007 70%, #2d0a13 100%);
+  color: #e7d7b1;
   border-radius: 0.4rem;
+  font-family: 'Cinzel', serif;
+  font-size: 1.1rem;
+  box-shadow: 0 2px 8px rgba(120, 10, 30, 0.2);
 }
 
 .stats-box,
 .add-stats-box {
-  border: 0.9px solid rgb(92, 92, 70);
+  border: 1px solid #2d161a;
   padding: 0.5rem;
   border-radius: 0.4rem;
   margin-bottom: 1vw;
-  background: transparent;
+  font-family: 'Cinzel', serif;
+  background: linear-gradient(180deg, #22171b 70%, #181012 100%);
+  color: #e7d7b1;
   font-size: 1.5rem;
-  color: white
 }
 
 .inventory-grid {
@@ -161,27 +176,23 @@
   margin-top: 1vw;
   width: 100%;
   box-sizing: border-box;
+  background: none;
 }
 
 .inventory-item {
-  background: #222;
+  background: linear-gradient(180deg, #22171b 70%, #181012 100%);
   border-radius: 0.75rem;
-  padding: 0.75rem;
-  text-align: center;
-  color: #eee;
-  cursor: pointer;
-  transition: transform 0.2s;
-  min-width: 70px;
-  min-height: 70px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  border: 1.5px solid #2d161a;
+  color: #e7d7b1;
+  box-shadow: 0 2px 8px rgba(40, 10, 20, 0.3);
+  font-family: 'Cinzel', serif;
+  font-size: 1.05rem;
+  transition: box-shadow 0.2s, border-color 0.2s;
 }
 
 .inventory-item:hover {
-  transform: scale(1);
-  box-shadow: 0 0 0.625rem #ffcc00;
+  box-shadow: 0 0 0.625rem #6a0f19;
+  border-color: #e7d7b1;
 }
 
 .item-icon {
@@ -192,6 +203,8 @@
   min-width: 50px;
   min-height: 50px;
   margin-bottom: 0.5rem;
+  border-radius: 0.4rem;
+  box-shadow: 0 1px 6px #2d161a;
 }
 
 .stat-points-container {
@@ -230,7 +243,10 @@
 .stat-line {
   font-size: 1.5rem;
   padding: 0.25rem 0;
-  color: white;
+  color: #e7d7b1;
+  font-size: 1.15rem;
+  font-family: 'Cinzel', serif;
+  text-shadow: 0 1px 6px #181012;
 }
 
 .inventory-section {
@@ -258,13 +274,13 @@
   top: -10px;
   transform: translate(-50%, -100%);
   /* transform: translateX(0, -50%); */
-  background: #222;
-  color: #fff;
-  border-radius: 0.5rem;
+  background: #22171b;
+  color: #e7d7b1;
+  border: 1px solid #6a0f19;
+  box-shadow: 0 2px 8px rgba(120, 10, 30, 0.3);
+  font-family: 'Cinzel', serif;
   padding: 0.75rem 1rem;
   min-width: 180px;
-  box-shadow: 0 0 10px #000a;
-  font-size: 0.95rem;
   pointer-events: none;
   white-space: pre-line;
 }
@@ -276,13 +292,13 @@
   left: 50%;
   top: -10px;
   transform: translateX(0, -50%);
-  background: #222;
-  color: #fff;
-  border-radius: 0.5rem;
+  background: #22171b;
+  color: #e7d7b1;
+  border: 1px solid #6a0f19;
+  box-shadow: 0 2px 8px rgba(120, 10, 30, 0.3);
+  font-family: 'Cinzel', serif;
   padding: 0.75rem 1rem;
   min-width: 180px;
-  box-shadow: 0 0 10px #000a;
-  font-size: 0.95rem;
   pointer-events: none;
   white-space: pre-line;
 }
@@ -351,16 +367,23 @@
 .inventory-action-btn {
   display: none;
   position: relative;
-  bottom: 2px;
-  right: 8px;
+
   z-index: 2;
   padding: 0.1rem 0.7rem;
-  background: #ffe600;
-  color: #222;
-  border: none;
+  background: linear-gradient(90deg, #2d161a 60%, #181012 100%);
+  color: #e7d7b1;
+  border: 1px solid #6a0f19;
   border-radius: 0.4rem;
   cursor: pointer;
-  font-size: 0.7rem;
+  font-size: 0.9rem;
+  box-shadow: 0 1px 4px #181012;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.inventory-action-btn:hover {
+  background: linear-gradient(90deg, #6a0f19 60%, #2d161a 100%);
+  border-color: #e7d7b1;
+  color: #fffbe6;
 }
 
 .inventory-item:hover .inventory-action-btn {
