@@ -38,7 +38,7 @@ async function fetchProfile() {
     if (response && response.ok) {
       const data = await response.json();
       profile.value = data || 0;
-      console.log("Profile data from navbar fetched successfully:", profile.value);
+      console.log("Profile data from navbar fetched successfully:", profile.value.race);
       return null;
     } else {
       const errData = await response.json();
@@ -52,10 +52,11 @@ async function fetchProfile() {
   }
 }
 
-// onMounted(() => {
-//     fetchProfile();
-// });
-
+onMounted(() => {
+  if (isLoggedIn.value=== true) {
+    fetchProfile();
+  }
+});
 const raceImage = computed(() => {
   if (profile.value?.race) {
     return new URL(`./assets/${profile.value.race}.png`, import.meta.url).href;
