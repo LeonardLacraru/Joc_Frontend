@@ -203,6 +203,7 @@ async function CancelSell(itemId) {
     <div class="top-section">
       <div class="left-panelMarket">
         <h2 class="tt-stats">Inventory</h2>
+        <div class="tt-stats">Gold: {{ profile.gold }}🟡</div>
         <div class="inventory-grid">
           <div v-for="item in gridInventory" class="inventory-item">
             <template v-if="item">

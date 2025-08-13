@@ -15,7 +15,7 @@ const statLabels = {
   crit_dmg: "Critical damage",
   is_crit: "Hit has been critical?",
   lifesteal: "Lifesteal",
-  total_hp: "HP left",
+  total_hp: "Total HP",
 };
 
 async function startBattle(selectedDifficulty) {
