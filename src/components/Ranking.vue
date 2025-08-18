@@ -124,10 +124,10 @@ async function attackPlayer(playerId) {
             router.push('/PVP');
         } else {
             const errData = await response.json();
-            alert(errData.detail || JSON.stringify(errData));
+            showBackendMessage(errData.detail || JSON.stringify(errData), 'error');
         }
     } catch (err) {
-        alert(err.message);
+        showBackendMessage(err.message, 'error');
     }
 }
 
@@ -446,22 +446,26 @@ function getRaceImage(race) {
 /* Toast message styles */
 .backend-toast {
   position: fixed;
-  top: 20px;
-  right: 20px;
-  background: rgba(50, 50, 50, 0.9);
-  color: #fff;
-  padding: 1rem 1.5rem;
+  top: 2rem;
+  right: 2rem;
+  background: #221313;
+  color: #e0cfa9;
+  border: 1px solid #7a3a3a;
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  z-index: 10001;
-  transition: opacity 0.3s ease;
+  padding: 1rem 1.5rem;
+  z-index: 9999;
+  box-shadow: 0 2px 12px #000a;
+  font-size: 1rem;
+  min-width: 180px;
+  max-width: 320px;
+  transition: opacity 0.3s;
 }
-
 .backend-toast.error {
-  background: rgba(255, 0, 0, 0.9);
+  border-color: #a33;
+  color: #ffbdbd;
 }
-
 .backend-toast.success {
-  background: rgba(0, 255, 0, 0.9);
+  border-color: #3a7a3a;
+  color: #bdf7bd;
 }
 </style>

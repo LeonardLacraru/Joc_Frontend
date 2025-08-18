@@ -3,16 +3,19 @@
 .mainInventory {
   width: 100vw;
   max-width: 1200px;
-  background-color: #181012;
   position: relative;
   box-sizing: border-box;
-  border-radius: 1.2rem;
+  border-radius: 1.5rem;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
   align-items: stretch;
   color: #e7d7b1;
-  box-shadow: 0 2px 16px rgba(40, 10, 20, 0.4);
+  box-shadow: 0 0 32px 8px #000a, 0 0 0 4px #ffe60099;
+  border: 2.5px solid #6a0f19;
+  font-family: 'Cinzel', serif;
+  background: linear-gradient(180deg, #22171b 70%, #181012 100%);
+  box-shadow: 0 2px 16px #ffe60044, 0 0 0 4px #6a0f19;
 }
 
 .top-section {

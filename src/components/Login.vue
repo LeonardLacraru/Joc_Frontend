@@ -9,6 +9,17 @@ const password = ref("");
 const router = useRouter();
 const isLoggedIn = inject("isLoggedIn");
 
+const backendMessage = ref('');
+const backendMessageType = ref('');
+
+function showBackendMessage(msg, type = 'info') {
+  backendMessage.value = msg;
+  backendMessageType.value = type;
+  setTimeout(() => {
+    backendMessage.value = '';
+  }, 3500);
+}
+
 async function handleLogin(e) {
   e.preventDefault();
   const payload = {
@@ -25,20 +36,19 @@ async function handleLogin(e) {
   const data = await response.json();
 
   if (response.ok) {
-    console.log("Data received from Django backend:", data); // This logs the data to the
     localStorage.setItem("access", data.access);
     localStorage.setItem("refresh", data.refresh);
     localStorage.setItem("username", username.value);
     isLoggedIn.value = true;
-    router.push("/profile"); // Redirect to x page after successful login
+    showBackendMessage("Login successful!", "success");
+    router.push("/profile");
   } else {
     if (data.detail) {
-      alert(data.detail);
+      showBackendMessage(data.detail, "error");
     } else if (typeof data === "object") {
-      // Show all field errors
-      alert(Object.values(data).flat().join("\n"));
+      showBackendMessage(Object.values(data).flat().join("\n"), "error");
     } else {
-      alert("An error occurred.");
+      showBackendMessage("An error occurred.", "error");
     }
   }
 }
@@ -46,6 +56,9 @@ async function handleLogin(e) {
 
 <template>
   <div class="main">
+    <div v-if="backendMessage" :class="['backend-toast', backendMessageType]">
+      {{ backendMessage }}
+    </div>
     <h1>Login</h1>
     <h3>Enter your login credentials</h3>
     <form @submit="handleLogin">
@@ -77,3 +90,30 @@ async function handleLogin(e) {
     </p>
   </div>
 </template>
+
+<style scoped>
+.backend-toast {
+  position: fixed;
+  top: 2rem;
+  right: 2rem;
+  background: #221313;
+  color: #e0cfa9;
+  border: 1px solid #7a3a3a;
+  border-radius: 8px;
+  padding: 1rem 1.5rem;
+  z-index: 9999;
+  box-shadow: 0 2px 12px #000a;
+  font-size: 1rem;
+  min-width: 180px;
+  max-width: 320px;
+  transition: opacity 0.3s;
+}
+.backend-toast.error {
+  border-color: #a33;
+  color: #ffbdbd;
+}
+.backend-toast.success {
+  border-color: #3a7a3a;
+  color: #bdf7bd;
+}
+</style>

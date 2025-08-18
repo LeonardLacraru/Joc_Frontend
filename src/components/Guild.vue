@@ -74,20 +74,21 @@ async function leaveGuild() {
         });
         if (response && response.ok) {
             const errData = await response.json();
-            let msg = errData.success || errData.detail || errData.message || 'You have left the guild.';
-            router.push({ 
-                path: '/profile', 
-                state: { backendMessage: msg, backendMessageType: 'success' }
-            });
+            let msg = errData.success || errData.detail || JSON.stringify(errData);
+            console.log('Guild left successfully:', msg);
+            showBackendMessage(Object.values(errData), 'success');
         } else {
             const errData = await response.json();
             let msg = errData.error || errData.detail || JSON.stringify(errData);
-            showBackendMessage(`Error! ${msg}`, 'error');
+            showBackendMessage(`Error! ${msg}`, 'error'); 
+       
         }
     } catch (err) {
         showBackendMessage(`Error! ${err.message}`, 'error');
     }
+    await fetchGuilds();
     levelUpLoading.value = false;
+
 }
 
 async function donateGold() {
@@ -171,6 +172,13 @@ const statList = [
       {{ backendMessage }}
     </div>
     <div class="guild-container" v-if="!loading && guild">
+        <nav class="navbar-fantasy">
+          <ul class="navbar-links">
+            <li><router-link to="/guild" active-class="active-link">Guild</router-link></li>
+            <li><router-link to="/ranking" active-class="active-link">Members</router-link></li>
+            <li><router-link to="/inventory" active-class="active-link">Requests</router-link></li>
+          </ul>
+        </nav>
       <div class="guild-panel">
         <div class="guild-level-points">
           <div class="guild-level-block">
@@ -191,7 +199,8 @@ const statList = [
           </div>
         </div>
         <div class="guild-progress-bar">
-          <div class="guild-progress" :style="{ width: (guild.gold / guild.gold_required_for_level_up * 100) + '%' }"></div>
+          <div class="guild-progress" :style="{ width: (guild.gold / guild.gold_required_for_level_up * 100) + '%' }">
+          </div>
         </div>
         <div class="guild-progress-label">
           Gold: {{ guild.gold }} / {{ guild.gold_required_for_level_up }}
@@ -203,11 +212,7 @@ const statList = [
         </div>
       </div>
       <div class="guild-members-row">
-        <div
-          v-for="member in guild.member_names.slice(0, 6)"
-          :key="member.character_name"
-          class="guild-member-card"
-        >
+        <div v-for="member in guild.member_names.slice(0, 6)" :key="member.character_name" class="guild-member-card">
           <img :src="getAvatar(member.race)" class="member-avatar" />
           <div class="member-name">{{ member.character_name }}</div>
           <div class="member-level">Lv {{ member.level }}</div>
@@ -216,13 +221,7 @@ const statList = [
       <div class="guild-bottom-row">
         <div class="guild-donate">
           <div class="donate-title">DONATE</div>
-          <input
-            v-model="donateAmount"
-            type="number"
-            min="1"
-            class="donate-input"
-            placeholder="Amount"
-          />
+          <input v-model="donateAmount" type="number" min="1" class="donate-input" placeholder="Amount" />
           <button class="donate-btn" @click="donateGold">Donate</button>
         </div>
         <div class="guild-upgrades">
@@ -241,7 +240,8 @@ const statList = [
       </div>
     </div>
     <div v-else class="guild-loading-message">
-      You are not part of any guild. Please join a guild from <router-link to="/ranking">Ranking</router-link> or create a new guild.
+      You are not part of any guild. Please join a guild from <router-link to="/ranking">Ranking</router-link> or
+      <router-link to="/create_guild">create a new guild.</router-link>
     </div>
 
     <div v-if="showLeaveConfirm" class="modal-backdrop">
@@ -255,17 +255,76 @@ const statList = [
 </template>
 
 <style scoped>
-.guild-bg {
-  min-height: 100vh;
-  background: #120a0a;
+
+.navbar-fantasy {
+  width: 100%;
+  background: linear-gradient(90deg, #23181a 80%, #181012 100%);
+  border-bottom: 2px solid #3a2323;
+  box-shadow: 0 2px 16px #000a, 0 0 0 2px #3a2323;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.7rem 2.5rem;
+  font-family: 'Cinzel', serif;
+  border-radius: 14px 14px 0 0;
+  margin-bottom: 2rem;
+}
+
+.navbar-logo .navbar-title:hover {
+  color: #fffbe6;
+}
+
+.navbar-links {
+  list-style: none;
+  display: flex;
+  gap: 2.2rem;
+  margin: 0;
   padding: 0;
+  justify-content: center; /* Center the links horizontally */
+  flex: 1;
+}
+
+.navbar-links li {
+  display: flex;
+  align-items: center;
+}
+
+.navbar-links a {
+  color: #e0cfa9;
+  font-size: 1.15rem;
+  font-family: 'Cinzel', serif;
+  text-decoration: none;
+  padding: 0.3rem 1.1rem;
+  border-radius: 8px;
+  transition: background 0.2s, color 0.2s;
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+
+.navbar-links a:hover,
+.navbar-links .active-link {
+  background: #3a2323;
+  color: #f5e6c8;
+  box-shadow: 0 2px 8px #0005;
+}
+
+@media (max-width: 700px) {
+  .navbar-fantasy {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 0.7rem 1rem;
+  }
+  .navbar-links {
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-top: 0.5rem;
+  }
+  .navbar-logo .navbar-title {
+    font-size: 1.3rem;
+  }
 }
 .guild-container {
   width: 50vw;
-  margin-left: 10vw;
-  margin-right: 10vw;
-  margin-top: 2rem;
-  margin-bottom: 2rem;
   background: #181010;
   color: #f5e6c8;
   border-radius: 18px;

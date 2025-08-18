@@ -41,6 +41,18 @@ const equipmentSlots = [
   { type: "gloves", class: "gloves-slot" },
 ];
 
+// Backend message logic
+const backendMessage = ref('');
+const backendMessageType = ref('');
+
+function showBackendMessage(msg, type = 'info') {
+  backendMessage.value = msg;
+  backendMessageType.value = type;
+  setTimeout(() => {
+    backendMessage.value = '';
+  }, 3500);
+}
+
 //Functions
 onMounted(async () => {
   // Always fetch profile data
@@ -58,13 +70,14 @@ async function fetchProfile() {
       current_hp.value = data.stats.current_hp || 0;
       loading.value = false;
       await getStatsCost();
+      console.log("Profile data fetched successfully:", profile.value);
       return null;
     } else {
       const errData = await response.json();
-      alert(errData.detail || JSON.stringify(errData));
+      showBackendMessage(errData.detail || JSON.stringify(errData), "error");
     }
   } catch (err) {
-    alert(err.message);
+    showBackendMessage(err.message, "error");
     error.value = err.message;
     loading.value = false;
     return err.message;
@@ -80,13 +93,14 @@ async function upgradeStat(stat_name) {
     });
     if (response.ok) {
       await fetchProfile();
+      showBackendMessage("Stat upgraded!", "success");
       return null;
     } else {
       const errData = await response.json();
-      alert(errData.detail || JSON.stringify(errData));
+      showBackendMessage(errData.detail || JSON.stringify(errData), "error");
     }
   } catch (err) {
-    alert(err.message);
+    showBackendMessage(err.message, "error");
     return err.message;
   }
 }
@@ -99,15 +113,15 @@ async function heal() {
     });
     if (response.ok) {
       await fetchProfile(); // Refresh profile after healing
-      console.log("Healed successfully:");
+      showBackendMessage("Healed successfully!", "success");
       return null;
     } else {
       const errData = await response.json();
-      alert(errData.detail || JSON.stringify(errData));
+      showBackendMessage(errData.detail || JSON.stringify(errData), "error");
     }
   }
   catch (err) {
-    alert(err.message);
+    showBackendMessage(err.message, "error");
     return err.message;
   }
 }
@@ -124,10 +138,10 @@ async function getStatsCost() {
       return null;
     } else {
       const errData = await response.json();
-      alert(errData.detail || JSON.stringify(errData));
+      showBackendMessage(errData.detail || JSON.stringify(errData), "error");
     }
   } catch (err) {
-    alert(err.message);
+    showBackendMessage(err.message, "error");
     return err.message;
   }
 }
@@ -155,14 +169,14 @@ async function equipItem(itemId) {
       }
     );
     if (response.ok) {
-      console.log("Item equipped successfully");
+      showBackendMessage("Item equipped!", "success");
       await fetchProfile(); // Refresh profile after equipping
     } else {
       const errData = await response.json();
-      alert(errData.detail || JSON.stringify(errData));
+      showBackendMessage(errData.detail || JSON.stringify(errData), "error");
     }
   } catch (err) {
-    alert(err.message);
+    showBackendMessage(err.message, "error");
     return err.message;
   }
 }
@@ -180,13 +194,14 @@ async function sellItem(itemId) {
       counter.value++;
       showButton.value = false;
       await fetchProfile();
+      showBackendMessage("Item sold!", "success");
       setTimeout(() => { showButton.value = true }, 0.01)
     } else {
       const errData = await response.json();
-      alert(errData.detail || JSON.stringify(errData));
+      showBackendMessage(errData.detail || JSON.stringify(errData), "error");
     }
   } catch (err) {
-    alert(err.message);
+    showBackendMessage(err.message, "error");
     return err.message;
   }
 }
@@ -247,6 +262,10 @@ const equippedByType = computed(() => {
 
 <template>
   <div class="mainInventory">
+    <!-- Backend Toast Message -->
+    <div v-if="backendMessage" :class="['backend-toast', backendMessageType]">
+      {{ backendMessage }}
+    </div>
     <div class="top-section">
       <!-- Stânga sus: echipamente și statistici -->
       <div class="left-panel">
@@ -258,11 +277,12 @@ const equippedByType = computed(() => {
             <h2 class ="stats-box">Total Stats</h2>
             <div v-for="[key, value] in filteredTotalStats" :key="key" class="stat-line">
               {{ statLabels[key] || key }}:
-              {{ key === 'hp'
+              {{
+                key === 'hp'
                   ? current_hp + '/' + value
                   : ['lifesteal', 'crit_rate', 'crit_dmg', 'hit_rate'].includes(key)
-                    ? value + '%'
-                    : value
+                    ? (typeof value === 'number' ? value.toFixed(2) : value) + '%'
+                    : (typeof value === 'number' ? value.toFixed(2) : value)
               }}
             </div>
           </div>
@@ -314,14 +334,13 @@ const equippedByType = computed(() => {
         <div class="stats-box">
           <h2>Character stats</h2>
           <div class="stat-line">Level: {{ profile.level || 0 }}</div>
-          <button @click="heal">Heal</button>
           <div v-if="profile.total_stats">
             <div v-for="[key, value] in filteredStats" :key="key" class="stat-line">
               <template v-if="key === 'hp'">
                 {{ statLabels[key] || key }}: {{ current_hp }}/{{ value }}
               </template>
               <template v-else>
-                {{ statLabels[key] || key }}: {{ value }}
+                {{ statLabels[key] || key }}: {{ value.toFixed(2) }}
               </template>
             </div>
           </div>
@@ -409,3 +428,30 @@ const equippedByType = computed(() => {
     </div>
   </div>
 </template>
+
+<style scoped>
+  .backend-toast {
+  position: fixed;
+  top: 2rem;
+  right: 2rem;
+  background: #221313;
+  color: #e0cfa9;
+  border: 1px solid #7a3a3a;
+  border-radius: 8px;
+  padding: 1rem 1.5rem;
+  z-index: 9999;
+  box-shadow: 0 2px 12px #000a;
+  font-size: 1rem;
+  min-width: 180px;
+  max-width: 320px;
+  transition: opacity 0.3s;
+}
+.backend-toast.error {
+  border-color: #a33;
+  color: #ffbdbd;
+}
+.backend-toast.success {
+  border-color: #3a7a3a;
+  color: #bdf7bd;
+}
+</style>

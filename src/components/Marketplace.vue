@@ -67,10 +67,10 @@ async function fetchInventory() {
 
     } else {
       const errData = await response.json();
-      alert(errData.detail || JSON.stringify(errData));
+      showBackendMessage(errData.detail || JSON.stringify(errData), "error");
     }
   } catch (err) {
-    alert(err.message);
+    showBackendMessage(err.message, "error");
     error.value = err.message;
     loading.value = false;
     return err.message;
@@ -88,10 +88,10 @@ async function fetchMarketplace() {
       return null;
     } else {
       const errData = await response.json();
-      alert(errData.detail || JSON.stringify(errData));
+      showBackendMessage(errData.detail || JSON.stringify(errData), "error");
     }
   } catch (err) {
-    alert(err.message);
+    showBackendMessage(err.message, "error");
     error.value = err.message;
     loading.value = false;
     return err.message;
@@ -102,7 +102,7 @@ async function confirmSell(itemId) {
   const itemPrice = prices.value[itemId];
 
   if (!itemPrice || itemPrice <= 0) {
-    alert("Set a valid price first!");
+    showBackendMessage("Set a valid price first!", "error");
     return;
   }
 
@@ -118,12 +118,13 @@ async function confirmSell(itemId) {
       await GetListedItems();
       prices.value[itemId] = 0;
       activeItemId.value = null;
+      showBackendMessage("Item listed for sale successfully!", "success");
     } else {
       const errData = await response.json();
-      alert(errData.detail || JSON.stringify(errData));
+      showBackendMessage(errData.detail || JSON.stringify(errData), "error");
     }
   } catch (err) {
-    alert(err.message);
+    showBackendMessage(err.message, "error");
     error.value = err.message;
     loading.value = false;
     return err.message;
@@ -141,12 +142,13 @@ async function BuyItem(itemId) {
       await fetchInventory();
       await fetchMarketplace();
       activeItemId.value = null;
+      showBackendMessage("Item purchased successfully!", "success");
     } else {
       const errData = await response.json();
-      alert(errData.detail || JSON.stringify(errData));
+      showBackendMessage(errData.detail || JSON.stringify(errData), "error");
     }
   } catch (err) {
-    alert(err.message);
+    showBackendMessage(err.message, "error");
     error.value = err.message;
     loading.value = false;
     return err.message;
@@ -162,10 +164,10 @@ async function GetListedItems() {
       return null;
     } else {
       const errData = await response.json();
-      alert(errData.detail || JSON.stringify(errData));
+      showBackendMessage(errData.detail || JSON.stringify(errData), "error");
     }
   } catch (err) {
-    alert(err.message);
+    showBackendMessage(err.message, "error");
     error.value = err.message;
     loading.value = false;
     return err.message;
@@ -183,157 +185,172 @@ async function CancelSell(itemId) {
       await fetchInventory();
       await GetListedItems();
       activeItemId.value = null;
+      showBackendMessage("Sale canceled successfully!", "success");
     } else {
       const errData = await response.json();
-      alert(errData.detail || JSON.stringify(errData));
+      showBackendMessage(errData.detail || JSON.stringify(errData), "error");
     }
   } catch (err) {
-    alert(err.message);
+    showBackendMessage(err.message, "error");
     error.value = err.message;
     loading.value = false;
     return err.message;
   }
 }
 
+const backendMessage = ref('');
+const backendMessageType = ref('');
+
+function showBackendMessage(msg, type = 'info') {
+  backendMessage.value = msg;
+  backendMessageType.value = type;
+  setTimeout(() => {
+    backendMessage.value = '';
+  }, 3500);
+}
+
 </script>
 
 <template>
-  <div class ="screen-80">
-  <div class="mainInventory">
-    <div class="top-section">
-      <div class="left-panelMarket">
-        <h2 class="tt-stats">Inventory</h2>
-        <div class="tt-stats">Gold: {{ profile.gold }}🟡</div>
-        <div class="inventory-grid">
-          <div v-for="item in gridInventory" class="inventory-item">
-            <template v-if="item">
-              <div class="tooltip-container">
-                <img :src="generateImageName(item.item.name, item.item.rarity)" :alt="item.name" class="item-icon"
-                  @error="handleImageError" />
-                <div class="custom-tooltip">
-                  <div class="tt-font-name" :class="`rarity-${item.item.rarity}`">
-                    {{ item.item.name }}
-                  </div>
-                  <div class="tt-font">
-                    Required Level: {{ item.item.required_level }}
-                  </div>
-                  <div class="tt-stats" v-if="item.item.stats && item.item.stats.length">
-                    Stats:
-                    <div v-for="(stat, sidx) in item.item.stats" :key="sidx" class="tt-stat">
-                      {{ statLabels[stat.name] || stat.name }}:
-                      <span>
-                        {{
-                          ["crit_rate", "hit_rate", "lifesteal"].includes(stat.name)
-                            ? stat.value + "%"
-                            : stat.value
-                        }}
-                      </span>
+  <div class="screen-80">
+    <div v-if="backendMessage" :class="['backend-toast', backendMessageType]">
+      {{ backendMessage }}
+    </div>
+    <div class="mainInventory">
+      <div class="top-section">
+        <div class="left-panelMarket">
+          <h2 class="tt-stats">Inventory</h2>
+          <div class="tt-stats">Gold: {{ profile.gold }}🟡</div>
+          <div class="inventory-grid">
+            <div v-for="item in gridInventory" class="inventory-item">
+              <template v-if="item">
+                <div class="tooltip-container">
+                  <img :src="generateImageName(item.item.name, item.item.rarity)" :alt="item.name" class="item-icon"
+                    @error="handleImageError" />
+                  <div class="custom-tooltip">
+                    <div class="tt-font-name" :class="`rarity-${item.item.rarity}`">
+                      {{ item.item.name }}
+                    </div>
+                    <div class="tt-font">
+                      Required Level: {{ item.item.required_level }}
+                    </div>
+                    <div class="tt-stats" v-if="item.item.stats && item.item.stats.length">
+                      Stats:
+                      <div v-for="(stat, sidx) in item.item.stats" :key="sidx" class="tt-stat">
+                        {{ statLabels[stat.name] || stat.name }}:
+                        <span>
+                          {{
+                            ["crit_rate", "hit_rate", "lifesteal"].includes(stat.name)
+                              ? stat.value + "%"
+                              : stat.value
+                          }}
+                        </span>
+                      </div>
                     </div>
                   </div>
+                  <button class="inventory-action-btn" @click="activeItemId = item.id">Sell</button>
+                  <div v-if="activeItemId === item.id" style="margin-top: 6px;">
+                    <input type="number" v-model.number="prices[item.id]" placeholder="Enter price"
+                      style="width: 80px; padding: 4px; font-size: 0.8rem; border-radius: 0.3rem;" />
+                    <button @click="confirmSell(item.id)"
+                      style="margin-left: 5px; padding: 4px 8px; font-size: 0.8rem; border-radius: 0.3rem;">
+                      Confirm
+                    </button>
+                  </div>
                 </div>
-                <button class="inventory-action-btn" @click="activeItemId = item.id">Sell</button>
-                <div v-if="activeItemId === item.id" style="margin-top: 6px;">
-                  <input type="number" v-model.number="prices[item.id]" placeholder="Enter price"
-                    style="width: 80px; padding: 4px; font-size: 0.8rem; border-radius: 0.3rem;" />
-                  <button @click="confirmSell(item.id)"
-                    style="margin-left: 5px; padding: 4px 8px; font-size: 0.8rem; border-radius: 0.3rem;">
-                    Confirm
-                  </button>
+              </template>
+              <template v-else>
+                <div class="item-icon" style="opacity: 0.2">Empty</div>
+              </template>
+            </div>
+          </div>
+        </div>
+        <div class="right-panel">
+          <h2 class="tt-stats">Listed Items</h2>
+          <div class="inventory-grid">
+            <div v-for="item in listed_items" class="inventory-item">
+              <template v-if="item">
+                <div class="tooltip-container">
+                  <img :src="generateImageName(item.item.item.name, item.item.item.rarity)" :alt="item.name"
+                    class="item-icon" @error="handleImageError" />
+                  <div class="custom-tooltip">
+                    <div class="tt-font-name" :class="`rarity-${item.item.item.rarity}`">
+                      {{ item.item.item.name }}
+                    </div>
+                    <div class="tt-font">
+                      Required Level: {{ item.item.item.required_level }}
+                    </div>
+                    <div class="tt-stats" v-if="item.item.item.stats && item.item.item.stats.length">
+                      Stats:
+                      <div v-for="(stat, sidx) in item.item.item.stats" :key="sidx" class="tt-stat">
+                        {{ statLabels[stat.name] || stat.name }}:
+                        <span>
+                          {{
+                            ["crit_rate", "hit_rate", "lifesteal"].includes(stat.name)
+                              ? stat.value + "%"
+                              : stat.value
+                          }}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="tt-font">
+                    Price: {{ item.price }}🟡
+                  </div>
+                  <button class="inventory-action-btn" @click="CancelSell(item.id)">Cancel</button>
                 </div>
-              </div>
-            </template>
-            <template v-else>
-              <div class="item-icon" style="opacity: 0.2">Empty</div>
-            </template>
+              </template>
+              <template v-else>
+                <div class="item-icon" style="opacity: 0.2">Empty</div>
+              </template>
+            </div>
           </div>
         </div>
       </div>
-      <div class="right-panel">
-        <h2 class="tt-stats">Listed Items</h2>
-        <div class="inventory-grid">
-          <div v-for="item in listed_items" class="inventory-item">
-            <template v-if="item">
-              <div class="tooltip-container">
-                <img :src="generateImageName(item.item.item.name, item.item.item.rarity)" :alt="item.name"
-                  class="item-icon" @error="handleImageError" />
-                <div class="custom-tooltip">
-                  <div class="tt-font-name" :class="`rarity-${item.item.item.rarity}`">
-                    {{ item.item.item.name }}
-                  </div>
-                  <div class="tt-font">
-                    Required Level: {{ item.item.item.required_level }}
-                  </div>
-                  <div class="tt-stats" v-if="item.item.item.stats && item.item.item.stats.length">
-                    Stats:
-                    <div v-for="(stat, sidx) in item.item.item.stats" :key="sidx" class="tt-stat">
-                      {{ statLabels[stat.name] || stat.name }}:
-                      <span>
-                        {{
-                          ["crit_rate", "hit_rate", "lifesteal"].includes(stat.name)
-                            ? stat.value + "%"
-                            : stat.value
-                        }}
-                      </span>
-                    </div>
-                  </div>
+      <h2 class="tt-stats">Marketplace</h2>
+      <div class="inventory-grid">
+        <div v-for="item in marketplace" class="inventory-item">
+          <template v-if="item">
+            <div class="tooltip-container">
+              <img :src="generateImageName(item.item.item.name, item.item.item.rarity)" :alt="item.name" class="item-icon"
+                @error="handleImageError" />
+              <div class="custom-tooltip">
+                <div class="tt-font-name" :class="`rarity-${item.item.item.rarity}`">
+                  {{ item.item.item.name }}
                 </div>
                 <div class="tt-font">
-                  Price: {{ item.price }}🟡
+                  Required Level: {{ item.item.item.required_level }}
                 </div>
-                <button class="inventory-action-btn" @click="CancelSell(item.id)">Cancel</button>
+
+                <div class="tt-stats" v-if="item.item.item.stats && item.item.item.stats.length">
+                  Stats:
+                  <div v-for="(stat, sidx) in item.item.item.stats" :key="sidx" class="tt-stat">
+                    {{ statLabels[stat.name] || stat.name }}:
+                    <span>
+                      {{
+                        ["crit_rate", "hit_rate", "lifesteal"].includes(stat.name)
+                          ? stat.value + "%"
+                          : stat.value
+                      }}
+                    </span>
+                  </div>
+                </div>
               </div>
-            </template>
-            <template v-else>
-              <div class="item-icon" style="opacity: 0.2">Empty</div>
-            </template>
-          </div>
+              <div class="tt-font">
+                Seller: {{ item.seller }}
+              </div>
+              <div class="tt-font">
+                Price: {{ item.price }}🟡
+              </div>
+              <button class="inventory-action-btn" @click="BuyItem(item.id)">Buy</button>
+            </div>
+          </template>
+          <template v-else>
+            <div class="item-icon" style="opacity: 0.2">Empty</div>
+          </template>
         </div>
       </div>
     </div>
-    <h2 class="tt-stats">Marketplace</h2>
-    <div class="inventory-grid">
-      <div v-for="item in marketplace" class="inventory-item">
-        <template v-if="item">
-          <div class="tooltip-container">
-            <img :src="generateImageName(item.item.item.name, item.item.item.rarity)" :alt="item.name" class="item-icon"
-              @error="handleImageError" />
-            <div class="custom-tooltip">
-              <div class="tt-font-name" :class="`rarity-${item.item.item.rarity}`">
-                {{ item.item.item.name }}
-              </div>
-              <div class="tt-font">
-                Required Level: {{ item.item.item.required_level }}
-              </div>
-
-              <div class="tt-stats" v-if="item.item.item.stats && item.item.item.stats.length">
-                Stats:
-                <div v-for="(stat, sidx) in item.item.item.stats" :key="sidx" class="tt-stat">
-                  {{ statLabels[stat.name] || stat.name }}:
-                  <span>
-                    {{
-                      ["crit_rate", "hit_rate", "lifesteal"].includes(stat.name)
-                        ? stat.value + "%"
-                        : stat.value
-                    }}
-                  </span>
-                </div>
-              </div>
-            </div>
-            <div class="tt-font">
-              Seller: {{ item.seller }}
-            </div>
-            <div class="tt-font">
-              Price: {{ item.price }}🟡
-            </div>
-            <button class="inventory-action-btn" @click="BuyItem(item.id)">Buy</button>
-          </div>
-        </template>
-        <template v-else>
-          <div class="item-icon" style="opacity: 0.2">Empty</div>
-        </template>
-      </div>
-    </div>
-  </div>
   </div>
 </template>
 
@@ -357,4 +374,28 @@ async function CancelSell(itemId) {
   border-radius: 0.7rem;
 }
 
+.backend-toast {
+  position: fixed;
+  top: 2rem;
+  right: 2rem;
+  background: #221313;
+  color: #e0cfa9;
+  border: 1px solid #7a3a3a;
+  border-radius: 8px;
+  padding: 1rem 1.5rem;
+  z-index: 9999;
+  box-shadow: 0 2px 12px #000a;
+  font-size: 1rem;
+  min-width: 180px;
+  max-width: 320px;
+  transition: opacity 0.3s;
+}
+.backend-toast.error {
+  border-color: #a33;
+  color: #ffbdbd;
+}
+.backend-toast.success {
+  border-color: #3a7a3a;
+  color: #bdf7bd;
+}
 </style>

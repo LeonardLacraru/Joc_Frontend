@@ -38,7 +38,6 @@ async function fetchProfile() {
     if (response && response.ok) {
       const data = await response.json();
       profile.value = data || 0;
-      console.log("Profile data from navbar fetched successfully:", profile.value.race);
       return null;
     } else {
       const errData = await response.json();
@@ -97,27 +96,27 @@ watch(isLoggedIn, (newVal) => {
         </router-link>
       </li>
       <li v-if="isLoggedIn">
-        <router-link to="/profile" class="nav-link link-body-emphasis">
+        <router-link to="/profile" class=" nav-link">
           Profile
         </router-link>
       </li>
       <li v-if="isLoggedIn">
-        <router-link to="/battle" class="nav-link link-body-emphasis">
+        <router-link to="/battle" class="nav-link">
           Battle
         </router-link>
       </li>
       <li v-if="isLoggedIn">
-        <router-link to="/ranking" class="nav-link link-body-emphasis">
+        <router-link to="/ranking" class="nav-link">
           Ranking
         </router-link>
       </li>
       <li v-if="isLoggedIn">
-        <router-link to="/marketplace" class="nav-link link-body-emphasis">
+        <router-link to="/marketplace" class="nav-link">
           Marketplace
         </router-link>
       </li>
       <li v-if="isLoggedIn">
-        <router-link to="/guild" class="nav-link link-body-emphasis">
+        <router-link to="/guild" class="nav-link">
           Guild
         </router-link>
       </li>
@@ -169,9 +168,13 @@ watch(isLoggedIn, (newVal) => {
 .sidebar-fantasy .nav-link.active,
 .sidebar-fantasy .nav-link:hover,
 .sidebar-fantasy .dropdown-item:hover {
-  background: linear-gradient(90deg, #2d161a 60%, #181012 100%);
-  color: #ffe600 !important;
-  border-color: #6a0f19;
+  background: #3a2323 !important;
+  color: #f5e6c8 !important;
+  box-shadow: 0 2px 8px #0005 !important;
+  border-radius: 8px !important;
+  font-weight: bold;
+  letter-spacing: 1px;
+  transition: background 0.2s, color 0.2s;
 }
 
 .sidebar-fantasy .dropdown-menu {

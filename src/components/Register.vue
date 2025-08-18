@@ -12,10 +12,21 @@ const username = ref("");
 const router = useRouter();
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
+const backendMessage = ref('');
+const backendMessageType = ref('');
+
+function showBackendMessage(msg, type = 'info') {
+  backendMessage.value = msg;
+  backendMessageType.value = type;
+  setTimeout(() => {
+    backendMessage.value = '';
+  }, 3500);
+}
+
 async function handleRegister(e) {
   e.preventDefault();
   if (password.value !== confirmPassword.value) {
-    alert("Passwords do not match!");
+    showBackendMessage("Passwords do not match!", "error");
     return;
   }
   const payload = {
@@ -33,16 +44,15 @@ async function handleRegister(e) {
   });
   const data = await response.json();
   if (response.ok) {
-    // Registration successful, redirect or show message
-    router.push("/login");
+    showBackendMessage("Registration successful!", "success");
+    setTimeout(() => router.push("/login"), 1500);
   } else {
     if (data.detail) {
-      alert(data.detail);
+      showBackendMessage(data.detail, "error");
     } else if (typeof data === "object") {
-      // Show all field errors
-      alert(Object.values(data).flat().join("\n"));
+      showBackendMessage(Object.values(data).flat().join("\n"), "error");
     } else {
-      alert("An error occurred.");
+      showBackendMessage("An error occurred.", "error");
     }
   }
 }
@@ -50,6 +60,9 @@ async function handleRegister(e) {
 
 <template>
   <div class="main">
+    <div v-if="backendMessage" :class="['backend-toast', backendMessageType]">
+      {{ backendMessage }}
+    </div>
     <h1>Register</h1>
     <h3>Enter your register credentials</h3>
 
@@ -116,3 +129,30 @@ async function handleRegister(e) {
     </p>
   </div>
 </template>
+
+<style scoped>
+.backend-toast {
+  position: fixed;
+  top: 2rem;
+  right: 2rem;
+  background: #221313;
+  color: #e0cfa9;
+  border: 1px solid #7a3a3a;
+  border-radius: 8px;
+  padding: 1rem 1.5rem;
+  z-index: 9999;
+  box-shadow: 0 2px 12px #000a;
+  font-size: 1rem;
+  min-width: 180px;
+  max-width: 320px;
+  transition: opacity 0.3s;
+}
+.backend-toast.error {
+  border-color: #a33;
+  color: #ffbdbd;
+}
+.backend-toast.success {
+  border-color: #3a7a3a;
+  color: #bdf7bd;
+}
+</style>
