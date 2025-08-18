@@ -9,6 +9,21 @@ const rankingType = ref('players'); // 'players' or 'guilds'
 const ranking = ref([]);
 const loading = ref(false);
 
+const backendMessage = ref('');
+const backendMessageType = ref(''); // e.g. 'error', 'success'
+
+const showJoinModal = ref(false);
+const joinDescription = ref('');
+const joinGuildId = ref(null);
+
+function showBackendMessage(msg, type = 'info') {
+  backendMessage.value = msg;
+  backendMessageType.value = type;
+  setTimeout(() => {
+    backendMessage.value = '';
+  }, 3500);
+}
+
 async function fetchPlayersRanking() {
     loading.value = true;
     try {
@@ -17,13 +32,18 @@ async function fetchPlayersRanking() {
             ranking.value = await response.json();
         } else {
             const errData = await response.json();
-            alert(errData.detail || JSON.stringify(errData));
+            let msg = errData.error || errData.detail || JSON.stringify(errData);
+            showBackendMessage(`Error! ${msg}`, 'error');
         }
     } catch (err) {
-        alert(err.message);
+        showBackendMessage(`Error! ${err.message}`, 'error');
+        loading.value = false;
+        return err.message;
     }
     loading.value = false;
 }
+
+
 
 async function fetchGuildsRanking() {
     loading.value = true;
@@ -39,6 +59,42 @@ async function fetchGuildsRanking() {
         alert(err.message);
     }
     loading.value = false;
+}
+
+function closeJoinModal() {
+  showJoinModal.value = false;
+  joinDescription.value = '';
+  joinGuildId.value = null;
+}
+
+async function submitJoinRequest() {
+  if (!joinDescription.value.trim()) {
+    showBackendMessage('Error! Please enter a description.', 'error');
+    return;
+  }
+  try {
+    const response = await authFetch(`${API_BASE_URL}/guild/${joinGuildId.value}/send_join_request/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ description: joinDescription.value }),
+    });
+    if (response && response.ok) {
+      showBackendMessage('Success! Join request sent.', 'success');
+      closeJoinModal();
+    } else {
+      let msg = '';
+      try {
+        const errData = await response.json();
+        msg = errData.error || errData.detail || JSON.stringify(errData);
+      } catch {
+        msg = response.statusText || 'Unknown error';
+      }
+      showBackendMessage(`Error! ${msg}`, 'error');
+    }
+  } catch (err) {
+    showBackendMessage(`Error! ${err.message}`, 'error');
+
+  }
 }
 
 // Load players ranking by default
@@ -128,17 +184,45 @@ function getRaceImage(race) {
         </div>
 
         <div v-if="rankingType === 'guilds' && ranking.length">
-            <div class="row mb-3 text-center fw-bold">
-                <div class="col-md-4 themed-grid-col">Nume</div>
-                <div class="col-md-4 themed-grid-col">Leader</div>
-                <div class="col-md-4 themed-grid-col">Level</div>
+            <div class="row mb-2 text-center fw-bold">
+                <div class="col-md-3 themed-grid-col">Name</div>
+                <div class="col-md-3 themed-grid-col">Leader</div>
+                <div class="col-md-3 themed-grid-col">Level</div>
+                <div class="col-md-3 themed-grid-col">Action</div>
+
             </div>
-            <div v-for="guild in ranking" :key="guild.id" class="row mb-2 text-center">
-                <div class="col-md-4 themed-grid-col">{{ guild.name }}</div>
-                <div class="col-md-4 themed-grid-col">{{ guild.leader }}</div>
-                <div class="col-md-4 themed-grid-col">{{ guild.level }}</div>
+            <div v-for="guild in ranking" :key="guild.id" class="row mb-3 text-center">
+                <div class="col-md-3 themed-grid-col">{{ guild.name }}</div>
+                <div class="col-md-3 themed-grid-col">{{ guild.leader }}</div>
+                <div class="col-md-3 themed-grid-col">{{ guild.level }}</div>
+                <div class="col-md-3 themed-grid-col">
+                    <button class="btn btn-dark px-3" type="button"
+                    @click="showJoinModal = true; joinGuildId = guild.id;">
+                    Send join request
+                    </button>
+                </div>
             </div>
         </div>
+
+        <!-- Join Request Modal -->
+<div v-if="showJoinModal" class="modal-backdrop">
+  <div class="join-modal">
+    <h4>Send Join Request</h4>
+    <textarea v-model="joinDescription" placeholder="Describe why you want to join..." rows="4"></textarea>
+    <div class="modal-actions">
+      <button class="btn btn-dark" @click="submitJoinRequest">Send</button>
+      <button class="btn btn-dark" @click="closeJoinModal">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Show backend message as a toast -->
+<div
+  v-if="backendMessage"
+  :class="['backend-toast', backendMessageType]"
+>
+  {{ backendMessage }}
+</div>
     </div>
 </template>
 
@@ -308,5 +392,76 @@ function getRaceImage(race) {
     border-radius: 50%;
     width: 60px;
     height: 60px;
+}
+
+/* Modal styles */
+.modal-backdrop {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(20, 10, 10, 0.85);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.join-modal {
+  background: #22171b;
+  border: 2px solid #3a232b;
+  border-radius: 12px;
+  padding: 2rem 2rem 1.5rem 2rem;
+  min-width: 320px;
+  max-width: 90vw;
+  box-shadow: 0 4px 24px #000a;
+  color: #e7d7b1;
+  font-family: 'Cinzel', serif;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.join-modal h4 {
+  margin-bottom: 1rem;
+  color: #e7d7b1;
+  text-align: center;
+}
+
+.join-modal textarea {
+  background: #181012;
+  color: #e7d7b1;
+  border: 1px solid #3a232b;
+  border-radius: 8px;
+  padding: 0.7rem;
+  font-size: 1rem;
+  margin-bottom: 1.2rem;
+  resize: vertical;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+}
+
+/* Toast message styles */
+.backend-toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: rgba(50, 50, 50, 0.9);
+  color: #fff;
+  padding: 1rem 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 10001;
+  transition: opacity 0.3s ease;
+}
+
+.backend-toast.error {
+  background: rgba(255, 0, 0, 0.9);
+}
+
+.backend-toast.success {
+  background: rgba(0, 255, 0, 0.9);
 }
 </style>

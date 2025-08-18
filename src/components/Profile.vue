@@ -43,6 +43,7 @@ const equipmentSlots = [
 
 //Functions
 onMounted(async () => {
+  // Always fetch profile data
   await fetchProfile();
 });
 

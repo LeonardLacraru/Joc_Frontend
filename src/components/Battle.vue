@@ -90,17 +90,17 @@ async function heal() {
   </div>
   <div v-if="battle_data && typeof battle_data === 'object'" class="battle-data">
     <p><strong>🏆 Winner: {{ battle_data.winner }}</strong></p>
-    <h2>Rundele bătăliei:</h2>
+    <h2>Rounds:</h2>
     <div v-for="(roundData, roundKey) in filteredRounds" :key="roundKey">
       <h3>Round: {{ roundData.Round }}</h3>
       <button @click="toggle(roundKey)">
-        {{ expanded[roundKey] ? 'Ascunde detalii' : 'Detalii rundă' }}
+        {{ expanded[roundKey] ? 'Hide details' : 'Round details' }}
       </button>
       
       <table style="width:100%" v-if="expanded[roundKey]">
         <thead>
           <tr>
-            <th>Acțiune</th>
+            <th>Action</th>
             <th>Player</th>
             <th>NPC</th>
           </tr>
