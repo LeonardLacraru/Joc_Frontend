@@ -105,11 +105,12 @@ async function heal() {
 }
 
 // Add or ensure these utility functions exist:
-function generateImageName(itemName, rarity) {
+function generateImageName(itemName) {
   if (!itemName)
-    return new URL("@/assets/items/default-item-icon.png", import.meta.url).href;
+    return new URL("@/assets/items/default-item-icon.png", import.meta.url)
+      .href;
   const nameParts = itemName.split(" ");
-  const fileName = nameParts.join("_").toLowerCase() + "_" + rarity + ".png";
+  const fileName = nameParts[0].toLowerCase() + ".png";
   return new URL(`../assets/items/${fileName}`, import.meta.url).href;
 }
 function handleImageError(event) {

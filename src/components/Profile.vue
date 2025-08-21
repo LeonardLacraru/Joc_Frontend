@@ -146,12 +146,12 @@ async function getStatsCost() {
   }
 }
 
-function generateImageName(itemName, rarity) {
+function generateImageName(itemName) {
   if (!itemName)
     return new URL("@/assets/items/default-item-icon.png", import.meta.url)
       .href;
   const nameParts = itemName.split(" ");
-  const fileName = nameParts.join("_").toLowerCase() + "_" + rarity + ".png";
+  const fileName = nameParts[0].toLowerCase() + ".png";
   return new URL(`../assets/items/${fileName}`, import.meta.url).href;
 }
 
@@ -293,9 +293,8 @@ const equippedByType = computed(() => {
             <template v-if="equippedByType[slot.type]">
               <div class="tooltip-container">
                 <img :src="generateImageName(
-                  equippedByType[slot.type].item.name,
-                  equippedByType[slot.type].item.rarity
-                )" class="item-icon" :alt="equippedByType[slot.type].item.name" @error="handleImageError" />
+                  equippedByType[slot.type].item.name)"
+                 class="item-icon" :alt="equippedByType[slot.type].item.name" @error="handleImageError" />
                 <div class="custom-tooltip-equipped">
                   <div class="tt-font">{{equippedByType[slot.type].is_equipped ? 'Equipped' : ''}}</div>
                   <div class="tt-font-name" :class="`rarity-${equippedByType[slot.type].item.rarity}`">
@@ -393,7 +392,7 @@ const equippedByType = computed(() => {
       <div v-for="item in gridInventory" class="inventory-item">
         <template v-if="item">
           <div class="tooltip-container">
-            <img :src="generateImageName(item.item.name, item.item.rarity)" :alt="item.name" class="item-icon"
+            <img :src="generateImageName(item.item.name)" :alt="item.name" class="item-icon"
               @error="handleImageError" />
             <div class="custom-tooltip">
               <div class="tt-font-name" :class="`rarity-${item.item.rarity}`">
