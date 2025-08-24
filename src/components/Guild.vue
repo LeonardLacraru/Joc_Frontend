@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { authFetch } from '@/utils/authFetch';
 import { useRouter } from 'vue-router';
 const router = useRouter();
@@ -10,6 +10,8 @@ const loading = ref(true);
 const donateAmount = ref('');
 const levelUpLoading = ref(false);
 const showLeaveConfirm = ref(false);
+const showGuildInfo = ref(true); // New reactive variable
+const showRequests = ref(false); // New reactive variable
 
 // Dummy online/offline for demo; replace with real status if available
 const isOnline = (member) => true; // or your logic
@@ -77,18 +79,17 @@ async function leaveGuild() {
             let msg = errData.success || errData.detail || JSON.stringify(errData);
             console.log('Guild left successfully:', msg);
             showBackendMessage(Object.values(errData), 'success');
+            // Add router navigation after successful guild leave
+            router.push('/profile');
         } else {
             const errData = await response.json();
             let msg = errData.error || errData.detail || JSON.stringify(errData);
             showBackendMessage(`Error! ${msg}`, 'error'); 
-       
         }
     } catch (err) {
         showBackendMessage(`Error! ${err.message}`, 'error');
     }
-    await fetchGuilds();
     levelUpLoading.value = false;
-
 }
 
 async function donateGold() {
@@ -162,6 +163,55 @@ const statList = [
   { key: 'crit_dmg', label: 'Crit Damage' },
   { key: 'hit_rate', label: 'Hit Rate' },
 ];
+
+const sortedMembers = computed(() => {
+  if (!guild.value?.member_names) return [];
+  return [...guild.value.member_names].sort((a, b) => {
+    if (a.character_name === guild.value.leader) return -1;
+    if (b.character_name === guild.value.leader) return 1;
+    return b.level - a.level;
+  });
+});
+
+const requests = ref([]);
+
+async function fetchRequests() {
+    try {
+        const response = await authFetch(`${API_BASE_URL}/guild/requests/`);
+        if (response && response.ok) {
+            requests.value = await response.json();
+        } else {
+            const errData = await response.json();
+            showBackendMessage(`Error! ${errData.error || errData.detail}`, 'error');
+        }
+    } catch (err) {
+        showBackendMessage(`Error! ${err.message}`, 'error');
+    }
+}
+
+async function handleRequest(requestId, action) {
+    try {
+        const response = await authFetch(`${API_BASE_URL}/guild/${requestId}/${action}_request/`, {
+            method: 'POST'
+        });
+        
+        if (response && response.ok) {
+            await fetchRequests(); // First fetch new requests
+            
+            // Only show success message if we still have requests
+            if (requests.value.length > 0) {
+                showBackendMessage(`Request ${action}ed successfully!`, 'success');
+            }
+        } else {
+            const errData = await response.json();
+            // Always show error messages
+            showBackendMessage(`Error! ${errData.error || errData.detail}`, 'error');
+        }
+    } catch (err) {
+        // Always show error messages
+        showBackendMessage(`Error! ${err.message}`, 'error');
+    }
+}
 </script>
 
 
@@ -172,78 +222,156 @@ const statList = [
       {{ backendMessage }}
     </div>
     <div class="guild-container" v-if="!loading && guild">
-        <nav class="navbar-fantasy">
-          <ul class="navbar-links">
-            <li><router-link to="/guild" active-class="active-link">Guild</router-link></li>
-            <li><router-link to="/ranking" active-class="active-link">Members</router-link></li>
-            <li><router-link to="/inventory" active-class="active-link">Requests</router-link></li>
-          </ul>
-        </nav>
-      <div class="guild-panel">
-        <div class="guild-level-points">
-          <div class="guild-level-block">
-            <span class="guild-level-label">Level</span>
-            <span class="guild-level-value">{{ guild.level }}</span>
+      <nav class="navbar-fantasy">
+        <ul class="navbar-links">
+          <li><a href="#" @click.prevent="showGuildInfo = true; showRequests = false" 
+                 :class="{ 'active-link': showGuildInfo }">Guild</a></li>
+          <li><a href="#" @click.prevent="showGuildInfo = false; showRequests = false" 
+                 :class="{ 'active-link': !showGuildInfo && !showRequests }">Members</a></li>
+          <li><a href="#" @click.prevent="showGuildInfo = false; showRequests = true; fetchRequests()" 
+                 :class="{ 'active-link': showRequests }">Requests</a></li>
+        </ul>
+      </nav>
+
+      <!-- Content Section -->
+      <div v-if="showGuildInfo">
+        <!-- Your existing guild panel code -->
+        <div class="guild-panel">
+          <div class="guild-level-points">
+            <div class="guild-level-block">
+              <span class="guild-level-label">Level</span>
+              <span class="guild-level-value">{{ guild.level }}</span>
+            </div>
+            <div class="guild-level-block">
+              <span class="guild-level-label">Name:</span>
+              <span class="guild-level-value">{{ guild.name }}</span>
+            </div>
+            <div class="guild-level-block">
+              <span class="guild-level-label">Leader:</span>
+              <span class="guild-level-value">{{ guild.leader }}</span>
+            </div>
+            <div class="guild-points-block">
+              <span class="guild-points-label">Points</span>
+              <span class="guild-points-value">{{ guild.stat_points }}</span>
+            </div>
           </div>
-          <div class="guild-level-block">
-            <span class="guild-level-label">Name:</span>
-            <span class="guild-level-value">{{ guild.name }}</span>
+          <div class="guild-progress-bar">
+            <div class="guild-progress" :style="{ width: (guild.gold / guild.gold_required_for_level_up * 100) + '%' }">
+            </div>
           </div>
-          <div class="guild-level-block">
-            <span class="guild-level-label">Leader:</span>
-            <span class="guild-level-value">{{ guild.leader }}</span>
+          <div class="guild-progress-label">
+            Gold: {{ guild.gold }} / {{ guild.gold_required_for_level_up }}
           </div>
-          <div class="guild-points-block">
-            <span class="guild-points-label">Points</span>
-            <span class="guild-points-value">{{ guild.stat_points }}</span>
-          </div>
-        </div>
-        <div class="guild-progress-bar">
-          <div class="guild-progress" :style="{ width: (guild.gold / guild.gold_required_for_level_up * 100) + '%' }">
+          <div class="guild-levelup-row">
+            <button class="levelup-btn" @click="levelUpGuild" :disabled="levelUpLoading">
+              {{ levelUpLoading ? 'Leveling Up...' : 'Level Up Guild' }}
+            </button>
           </div>
         </div>
-        <div class="guild-progress-label">
-          Gold: {{ guild.gold }} / {{ guild.gold_required_for_level_up }}
+        <div class="guild-members-row">
+          <div v-for="member in sortedMembers.slice(0, 6)" :key="member.character_name" class="guild-member-card">
+            <img :src="getAvatar(member.race)" class="member-avatar" />
+            <div class="member-name">{{ member.character_name }}</div>
+            <div class="member-level">Lv {{ member.level }}</div>
+          </div>
         </div>
-        <div class="guild-levelup-row">
-          <button class="levelup-btn" @click="levelUpGuild" :disabled="levelUpLoading">
-            {{ levelUpLoading ? 'Leveling Up...' : 'Level Up Guild' }}
-          </button>
-        </div>
-      </div>
-      <div class="guild-members-row">
-        <div v-for="member in guild.member_names.slice(0, 6)" :key="member.character_name" class="guild-member-card">
-          <img :src="getAvatar(member.race)" class="member-avatar" />
-          <div class="member-name">{{ member.character_name }}</div>
-          <div class="member-level">Lv {{ member.level }}</div>
-        </div>
-      </div>
-      <div class="guild-bottom-row">
-        <div class="guild-donate">
-          <div class="donate-title">DONATE</div>
-          <input v-model="donateAmount" type="number" min="1" class="donate-input" placeholder="Amount" />
-          <button class="donate-btn" @click="donateGold">Donate</button>
-        </div>
-        <div class="guild-upgrades">
-          <div class="upgrade-title">UPGRADES</div>
-          <div class="upgrade-list">
-            <div class="upgrade-row" v-for="stat in statList" :key="stat.key">
-              <span class="upgrade-label">{{ stat.label }}</span>
-              <span class="upgrade-value">{{ Number(guild.stats[stat.key]).toFixed(2) }}%</span>
-              <button class="upgrade-btn" @click="upgradeStat(stat.key)">Upgrade</button>
+        <div class="guild-bottom-row">
+          <div class="guild-donate">
+            <div class="donate-title">DONATE</div>
+            <input v-model="donateAmount" type="number" min="1" class="donate-input" placeholder="Amount" />
+            <button class="donate-btn" @click="donateGold">Donate</button>
+          </div>
+          <div class="guild-upgrades">
+            <div class="upgrade-title">UPGRADES</div>
+            <div class="upgrade-list">
+              <div class="upgrade-row" v-for="stat in statList" :key="stat.key">
+                <span class="upgrade-label">{{ stat.label }}</span>
+                <span class="upgrade-value">{{ Number(guild.stats[stat.key]).toFixed(2) }}%</span>
+                <button class="upgrade-btn" @click="upgradeStat(stat.key)">Upgrade</button>
+              </div>
             </div>
           </div>
         </div>
+        <div class="guild-leave-row">
+          <button class="leave-btn" @click="showLeaveConfirm = true">Leave Guild</button>
+        </div>
       </div>
-      <div class="guild-leave-row">
-        <button class="leave-btn" @click="showLeaveConfirm = true">Leave Guild</button>
+
+      <div v-else>
+        <!-- Members and Requests section -->
+        <div v-if="showRequests" class="requests-table-container">
+          <div v-if="requests.length === 0" class="no-requests-message">
+            No requests
+          </div>
+          <table v-else class="members-table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Level</th>
+                    <th>Description</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="request in requests" :key="request.id">
+                    <td class="name-cell">
+                        <img :src="getAvatar(request.sender.race)" class="member-table-avatar" />
+                        {{ request.sender.character_name }}
+                    </td>
+                    <td>{{ request.sender.level }}</td>
+                    <td class="request-message">{{ request.description }}</td>
+                    <td class="action-buttons">
+                    <button 
+                        class="btn btn-dark btn-sm mx-1" 
+                        @click="handleRequest(request.id, 'accept')"
+                    >
+                        Accept
+                    </button>
+                    <button 
+                        class="btn btn-dark btn-sm mx-1" 
+                        @click="handleRequest(request.id, 'deny')"
+                    >
+                        Deny
+                    </button>
+                  </td>
+                </tr>
+            </tbody>
+        </table>
+        </div>
+        <div v-else class="members-table-container">
+          <!-- Your existing members table -->
+          <table class="members-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Level</th>
+                <th>Role</th>
+                <th>Gold donated</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="member in sortedMembers" :key="member.character_name">
+                <td class="name-cell">
+                  <img :src="getAvatar(member.race)" class="member-table-avatar" />
+                  {{ member.character_name }}
+                  <span v-if="member.character_name === guild.leader" class="leader-badge">Leader</span>
+                </td>
+                <td>{{ member.level }}</td>
+                <td>{{ member.character_name === guild.leader ? 'Leader' : 'Member' }}</td>
+                <td>{{ member.gold_donated || 0 }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
+
     <div v-else class="guild-loading-message">
       You are not part of any guild. Please join a guild from <router-link to="/ranking">Ranking</router-link> or
       <router-link to="/create_guild">create a new guild.</router-link>
     </div>
 
+    <!-- Leave Confirmation Modal -->
     <div v-if="showLeaveConfirm" class="modal-backdrop">
       <div class="modal-content">
         <p>Are you sure you want to leave the guild?</p>
@@ -384,7 +512,6 @@ const statList = [
   background-clip: text;
   padding: 0.1rem 0.3rem;
   border-radius: 4px;
-  margin-top: 10vw;
   display: inline-block;
 }
 .leave-btn {
@@ -706,5 +833,118 @@ const statList = [
 
 .modal-content button:hover {
   background: #5a2222;
+}
+
+.members-table-container {
+  background: #221313;
+  border: 1px solid #2d1818;
+  border-radius: 10px;
+  padding: 1.5rem;
+  margin-top: 1rem;
+  box-shadow: 0 2px 8px #0005;
+}
+
+.members-table {
+  width: 100%;
+  border-collapse: collapse;
+  color: #e0cfa9;
+}
+
+.members-table th {
+  text-align: left;
+  padding: 1rem;
+  border-bottom: 2px solid #3a2323;
+  color: #f5e6c8;
+  font-size: 1.1rem;
+  font-weight: bold;
+}
+
+.members-table td {
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid #2d1818;
+}
+
+.members-table tr:last-child td {
+  border-bottom: none;
+}
+
+.member-table-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+  margin-right: 1rem;
+  vertical-align: middle;
+}
+
+.name-cell {
+  display: flex;
+  align-items: center;
+}
+
+.leader-badge {
+  background: #6e4c1b;
+  color: #f5e6c8;
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  margin-left: 0.8rem;
+}
+
+.rank-cell {
+  color: #b0a9a9;
+  font-weight: bold;
+}
+
+.status-indicator {
+  padding: 0.3rem 0.8rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  font-weight: bold;
+}
+
+.status-indicator.online {
+  background: #2d3a23;
+  color: #7fff00;
+}
+
+.status-indicator.offline {
+  background: #3a2323;
+  color: #ff7f7f;
+}
+.action-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.btn-dark {
+    background: linear-gradient(90deg, #2d161a 60%, #181012 100%);
+    color: #e7d7b1;
+    border: 1.5px solid #3a232b;
+    font-family: 'Cinzel', serif;
+    font-size: 0.9rem;
+    letter-spacing: 1px;
+    box-shadow: 0 1px 6px #181012;
+    transition: background 0.2s, border-color 0.2s;
+    padding: 0.3rem 1rem;
+}
+
+.btn-dark:hover {
+    background: linear-gradient(90deg, #3a232b 60%, #2d161a 100%);
+    border-color: #e7d7b1;
+    color: #fffbe6;
+}
+
+/* Remove the old button styles */
+.accept-btn, .deny-btn {
+    display: none; /* or you can just delete these classes */
+}
+
+.no-requests-message {
+    text-align: center;
+    color: #b0a9a9;
+    padding: 2rem;
+    font-size: 1.1rem;
+    font-style: italic;
 }
 </style>

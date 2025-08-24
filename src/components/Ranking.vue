@@ -172,10 +172,10 @@ function getRaceImage(race) {
             </div>
             <div v-for="(player, index) in ranking" :key="player.id" class="row mb-2 text-center align-items-center">
                 <div class="col-md-3 themed-grid-col">{{ index + 1 }}</div>
-<div class="col-md-3 themed-grid-col player-info">
-  <span class="player-name">{{ player.character_name }}</span>
-  <img :src="getRaceImage(player.race)" alt="" width="60" height="60" class="player-img" />
-</div>
+    <div class="col-md-3 themed-grid-col player-info">
+    <span class="player-name">{{ player.character_name }}</span>
+    <img :src="getRaceImage(player.race)" alt="" width="60" height="60" class="player-img" />
+    </div>
                 <div class="col-md-3 themed-grid-col">{{ player.level }}</div>
                 <div class="col-md-3 themed-grid-col">
                     <button class="btn btn-dark px-3" type="button" @click="attackPlayer(player.id)">Attack</button>

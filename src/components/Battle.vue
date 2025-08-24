@@ -364,8 +364,8 @@ function handleImageError(event) {
 }
 
 .item-icon {
-  width: 48px;
-  height: 48px;
+  width: 100px;
+  height: 100px;
   border-radius: 6px;
   border: 1.5px solid #ffe600;
   background: #22171b;
