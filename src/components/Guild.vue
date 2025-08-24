@@ -345,7 +345,6 @@ async function handleRequest(requestId, action) {
               <tr>
                 <th>Name</th>
                 <th>Level</th>
-                <th>Role</th>
                 <th>Gold donated</th>
               </tr>
             </thead>
@@ -357,7 +356,6 @@ async function handleRequest(requestId, action) {
                   <span v-if="member.character_name === guild.leader" class="leader-badge">Leader</span>
                 </td>
                 <td>{{ member.level }}</td>
-                <td>{{ member.character_name === guild.leader ? 'Leader' : 'Member' }}</td>
                 <td>{{ member.gold_donated || 0 }}</td>
               </tr>
             </tbody>

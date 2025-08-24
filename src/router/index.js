@@ -9,6 +9,8 @@ import Attack_player from "@/components/Attack_player.vue";
 import Marketplace from "@/components/Marketplace.vue"; 
 import Guild from "@/components/Guild.vue"; 
 import CreateGuild from "@/components/CreateGuild.vue"; 
+import WorldBoss from "@/components/WorldBoss.vue";
+import AdminPanel from "@/components/AdminPanel.vue";
 
 const routes = [
   { path: "/", component: Home },
@@ -20,7 +22,9 @@ const routes = [
   {path: "/PVP", component: Attack_player, meta: { requiresAuth: true } }, // Protected route
   {path:"/marketplace", component: Marketplace, meta: { requiresAuth: true } }, // Protected route
   {path: "/guild", component: Guild, meta: { requiresAuth: true } }, // Protected route
-  {path: "/create_guild", component: CreateGuild, meta: { requiresAuth: true } }, // Protected route
+  {path: "/create_guild", component: CreateGuild, meta: { requiresAuth: true } },
+  {path:"/worldboss", component: WorldBoss, meta:{requestAuth: true}}, // Protected route
+  {path:"/adminpanel", component: AdminPanel, meta:{requiresAuth: true}}, // Protected route
 ];
 
 const router = createRouter({
@@ -29,13 +33,34 @@ const router = createRouter({
 });
 
 // Navigation guard
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   const isLoggedIn = !!localStorage.getItem("access");
   if (to.meta.requiresAuth && !isLoggedIn) {
     next("/"); // Redirect to home if not logged in
-  } else {
-    next();
+    return;
   }
+  if (to.meta.requiresAdmin) {
+    // Try to get profile from localStorage
+    let profile = null;
+    try {
+      profile = JSON.parse(localStorage.getItem("profile"));
+    } catch (e) {}
+    // If not found, fetch from API
+    if (!profile) {
+      try {
+        const res = await import("../utils/authFetch.js").then(m => m.authFetch)(`${import.meta.env.VITE_API_BASE_URL}/profile/`);
+        if (res && res.ok) {
+          profile = await res.json();
+          localStorage.setItem("profile", JSON.stringify(profile)); // <-- FIXED HERE
+        }
+      } catch (e) {}
+    }
+    if (!profile?.is_admin) {
+      next("/"); // Not admin, redirect
+      return;
+    }
+  }
+  next();
 });
 
 export default router;

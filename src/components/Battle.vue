@@ -203,13 +203,13 @@ function handleImageError(event) {
                       <td><strong>{{ statLabels[key] }}</strong></td>
                       <td>
                         <strong>
-                          {{ roundData.Player[key] }}
+                          {{ typeof roundData.Player[key] === 'number' ? roundData.Player[key].toFixed(2) : roundData.Player[key] }}
                           <span v-if="['crit_rate', 'hit_rate'].includes(key)">%</span>
                         </strong>
                       </td>
                       <td>
                         <strong>
-                          {{ roundData.NPC[key] }}
+                          {{ typeof roundData.NPC[key] === 'number' ? roundData.NPC[key].toFixed(2) : roundData.NPC[key] }}
                           <span v-if="['crit_rate', 'hit_rate'].includes(key)">%</span>
                         </strong>
                       </td>

@@ -153,14 +153,12 @@
 }
 
 .placeholder-slot .item-icon{
-  width: 100%;
-  height: 100%;
-  max-width: 150px;
-  max-height: 120px;
-  min-width: 0;
-  min-height: 0;
-  object-fit: cover;
+  width: 150px;
+  height: 120px;
+  min-width: 150px;
+  min-height: 120px;
   border-radius: 0.4rem;
+  object-fit: cover;
   box-shadow: 0 1px 6px #2d161a;
   margin: 0;           /* Remove margin */
   padding: 0;          /* Remove padding */
@@ -170,8 +168,8 @@
 
 
 .placeholder-slot-bigger-slot .item-icon {
-  width: 100%;
-  height: 100%;
+  width: 150px;
+  height: 170px;
   max-width: 150px;
   max-height: 170px;
   min-width: 0;

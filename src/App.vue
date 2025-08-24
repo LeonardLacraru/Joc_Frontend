@@ -120,6 +120,16 @@ watch(isLoggedIn, (newVal) => {
           Guild
         </router-link>
       </li>
+      <li v-if="isLoggedIn">
+        <router-link to="/worldboss" class="nav-link">
+          World Boss
+        </router-link>
+      </li>
+      <li v-if="isLoggedIn && profile?.is_admin">
+        <router-link to="/adminpanel" class="nav-link">
+          Admin Panel
+        </router-link>
+      </li>
     </ul>
     <hr />
     <div v-if="isLoggedIn" class="dropdown">
