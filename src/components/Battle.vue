@@ -1,6 +1,7 @@
 <script setup>
 import { authFetch } from "../utils/authFetch.js";
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
+import TierDungeon from "./TierDungeon.vue";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const battle_data = ref(null);
@@ -29,14 +30,14 @@ const statLabels = {
   total_hp: "Total HP",
 };
 
-const backendMessage = ref('');
-const backendMessageType = ref('');
+const backendMessage = ref("");
+const backendMessageType = ref("");
 
-function showBackendMessage(msg, type = 'info') {
+function showBackendMessage(msg, type = "info") {
   backendMessage.value = msg;
   backendMessageType.value = type;
   setTimeout(() => {
-    backendMessage.value = '';
+    backendMessage.value = "";
   }, 3500);
 }
 
@@ -44,6 +45,9 @@ async function startBattle(selectedDifficulty) {
   const payload = {
     difficulty: selectedDifficulty,
   };
+  // Reset preferences before starting new battle
+  showRounds.value = false;
+  expanded.value = {};
   try {
     const response = await authFetch(`${API_BASE_URL}/create_battle/`, {
       method: "POST",
@@ -54,26 +58,24 @@ async function startBattle(selectedDifficulty) {
     if (response.ok) {
       const data = await response.json();
       battle_data.value = data;
-      if (typeof battle_data.value === 'object') {
+      if (typeof battle_data.value === "object") {
         console.log("Battle started successfully:", battle_data.value);
-      }
-      else {
-        showBackendMessage(battle_data.value, 'error');
+      } else {
+        showBackendMessage(battle_data.value, "error");
       }
     } else {
       const errData = await response.json();
-      showBackendMessage(errData.detail || JSON.stringify(errData), 'error');
+      showBackendMessage(errData.detail || JSON.stringify(errData), "error");
     }
-  }
-  catch (err) {
-    showBackendMessage(err.message, 'error');
+  } catch (err) {
+    showBackendMessage(err.message, "error");
     return err.message;
   }
   showRounds.value = false;
 }
 
 function toggle(section) {
-  expanded.value[section] = !expanded.value[section]
+  expanded.value[section] = !expanded.value[section];
 }
 
 const filteredRounds = computed(() => {
@@ -95,13 +97,49 @@ async function heal() {
       return null;
     } else {
       const errData = await response.json();
-      showBackendMessage(errData.detail || JSON.stringify(errData), 'error');
+      showBackendMessage(errData.detail || JSON.stringify(errData), "error");
     }
-  }
-  catch (err) {
-    showBackendMessage(err.message, 'error');
+  } catch (err) {
+    showBackendMessage(err.message, "error");
     return err.message;
   }
+}
+
+const dungeonBattleData = ref(null);
+const dungeonExpanded = ref({});
+const showDungeonRounds = ref(false);
+
+async function startDungeonBattle(selectedDifficulty) {
+  const payload = {
+    difficulty: selectedDifficulty,
+  };
+  // Reset preferences before starting new dungeon battle
+  showDungeonRounds.value = false;
+  dungeonExpanded.value = {};
+  try {
+    const response = await authFetch(`${API_BASE_URL}/create_dungeon/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (response.ok) {
+      const data = await response.json();
+      console.log(data);
+      showBackendMessage("Dungeon battle started!", "success");
+      dungeonBattleData.value = data;
+    } else {
+      const errData = await response.json();
+      showBackendMessage(errData.detail || JSON.stringify(errData), "error");
+    }
+  } catch (err) {
+    showBackendMessage(err.message, "error");
+    return err.message;
+  }
+}
+function toggleDungeon(battleIdx, roundKey) {
+  if (!dungeonExpanded.value[battleIdx]) dungeonExpanded.value[battleIdx] = {};
+  dungeonExpanded.value[battleIdx][roundKey] =
+    !dungeonExpanded.value[battleIdx][roundKey];
 }
 
 // Add or ensure these utility functions exist:
@@ -114,126 +152,517 @@ function generateImageName(itemName) {
   return new URL(`../assets/items/${fileName}`, import.meta.url).href;
 }
 function handleImageError(event) {
-  event.target.src = new URL('../assets/items/image.png', import.meta.url).href;
+  event.target.src = new URL("../assets/items/image.png", import.meta.url).href;
 }
 
+const showClassic = ref(true);
+const showDungeon = ref(false);
+const showTierDungeon = ref(false);
+const activeTab = ref("classic");
+
+function switchTab(tab) {
+  showClassic.value = tab === "classic";
+  showDungeon.value = tab === "dungeon";
+  showTierDungeon.value = tab === "tier";
+  activeTab.value = tab;
+  // Clear results when switching tabs
+  if (tab === "classic") {
+    battle_data.value = null;
+    showRounds.value = false;
+  }
+  if (tab === "dungeon") {
+    dungeonBattleData.value = null;
+    showDungeonRounds.value = false;
+  }
+}
+
+function getDungeonBattles() {
+  if (!dungeonBattleData.value) return [];
+  // Only keys '1', '2', '3' are battles
+  return [1, 2, 3].map((idx) => dungeonBattleData.value[idx]).filter(Boolean);
+}
+
+// Helper to get all rounds for a battle object
+function getBattleRounds(battle) {
+  // Only numeric keys are rounds
+  return Object.keys(battle)
+    .filter((key) => !isNaN(Number(key)))
+    .map((key) => battle[key]);
+}
+
+// Helper to get difficulty for a battle
+function getBattleDifficulty(battle) {
+  // Find the first round and return its difficulty
+  const rounds = getBattleRounds(battle);
+  return rounds.length > 0 ? rounds[0].difficulty : "";
+}
+
+function getPlayerName(roundData) {
+  // Find the key that is not 'NPC', 'Round', or 'difficulty'
+  return Object.keys(roundData).find(
+    (k) => k !== "NPC" && k !== "Round" && k !== "difficulty"
+  );
+}
+
+const profile = ref(null);
+const loadingProfile = ref(true);
+
+onMounted(async () => {
+  try {
+    const response = await authFetch(`${API_BASE_URL}/profile/`, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    });
+    const data = await response.json();
+    profile.value = data;
+  } catch (err) {
+    profile.value = null;
+  } finally {
+    loadingProfile.value = false;
+  }
+});
 </script>
 
 <template>
   <div class="battle-bg">
     <div class="battle-panel">
-      <div class="battle-header">
-        <button class="battle-btn" @click="startBattle('easy')">Start Easy Battle</button>
-        <button class="battle-btn" @click="startBattle('medium')">Start Medium Battle</button>
-        <button class="battle-btn" @click="startBattle('hard')">Start Hard Battle</button>
-      </div>
-      <div v-if="battle_data && typeof battle_data === 'object'" class="battle-data">
-        <p class="winner">
-          <span class="trophy">🏆</span>
-          Winner: <span class="winner-name">{{ battle_data.winner }}</span>
-        </p>
-        <!-- Rewards Section -->
-        <div class="rewards-section">
-          <h3 class="rewards-title">Rewards</h3>
-          <div class="rewards-list">
-            <span class="reward-label">EXP:</span>
-            <span class="reward-value">{{ battle_data.exp_gained }}</span>
-            <span class="reward-label">Gold:</span>
-            <span class="reward-value">{{ battle_data.gold_earned }}</span>
-            <template v-if="battle_data.reward">
-              <span class="reward-label">Item:</span>
-              <div class="tooltip-container reward-item">
-                <img
-                  :src="generateImageName(battle_data.reward.name, battle_data.reward.rarity)"
-                  :alt="battle_data.reward.name"
-                  class="item-icon"
-                  @error="handleImageError"
-                />
-                <div class="custom-tooltip">
-                  <div class="tt-font-name" :class="`rarity-${battle_data.reward.rarity}`">
-                    {{ battle_data.reward.name }}
-                  </div>
-                  <div class="tt-font">
-                    Required Level: {{ battle_data.reward.required_level }}
-                  </div>
-                  <div class="tt-stats" v-if="battle_data.reward.stats && battle_data.reward.stats.length">
-                    Stats:
-                    <div v-for="(stat, sidx) in battle_data.reward.stats" :key="sidx" class="tt-stat">
-                      {{ statLabels[stat.name] || stat.name }}:
-                      <span>
-                        {{  
-                          ["crit_rate", "hit_rate", "lifesteal"].includes(stat.name)
-                            ? stat.value + "%"
-                            : stat.value
-                        }}
-                      </span>
+      <nav class="navbar-fantasy">
+        <ul class="navbar-links">
+          <li>
+            <a
+              href="#"
+              @click.prevent="switchTab('classic')"
+              :class="{ 'active-link': showClassic }"
+              >Classic Battle</a
+            >
+          </li>
+          <li>
+            <a
+              href="#"
+              @click.prevent="switchTab('dungeon')"
+              :class="{ 'active-link': showDungeon }"
+              >Dungeon Battle</a
+            >
+          </li>
+          <li>
+            <a
+              href="#"
+              @click.prevent="switchTab('tier')"
+              :class="{ 'active-link': showTierDungeon }"
+              >Tier Dungeon Battle</a
+            >
+          </li>
+        </ul>
+      </nav>
+      <div v-if="showClassic">
+        <div class="battle-header">
+          <button class="battle-btn" @click="startBattle('easy')">
+            Start Easy Battle
+          </button>
+          <button class="battle-btn" @click="startBattle('medium')">
+            Start Medium Battle
+          </button>
+          <button class="battle-btn" @click="startBattle('hard')">
+            Start Hard Battle
+          </button>
+        </div>
+        <div
+          v-if="battle_data && typeof battle_data === 'object'"
+          class="battle-data"
+        >
+          <p class="winner">
+            <span class="trophy">🏆</span>
+            Winner: <span class="winner-name">{{ battle_data.winner }}</span>
+          </p>
+          <!-- Rewards Section -->
+          <div class="rewards-section">
+            <h3 class="rewards-title">Rewards</h3>
+            <div class="rewards-list">
+              <span class="reward-label">EXP:</span>
+              <span class="reward-value">{{ battle_data.exp_gained }}</span>
+              <span class="reward-label">Gold:</span>
+              <span class="reward-value">{{ battle_data.gold_earned }}</span>
+              <template v-if="battle_data.reward">
+                <span class="reward-label">Item:</span>
+                <div class="tooltip-container reward-item">
+                  <img
+                    :src="
+                      generateImageName(
+                        battle_data.reward.name,
+                        battle_data.reward.rarity
+                      )
+                    "
+                    :alt="battle_data.reward.name"
+                    class="item-icon"
+                    @error="handleImageError"
+                  />
+                  <div class="custom-tooltip">
+                    <div
+                      class="tt-font-name"
+                      :class="`rarity-${battle_data.reward.rarity}`"
+                    >
+                      {{ battle_data.reward.name }}
+                    </div>
+                    <div class="tt-font">
+                      Required Level: {{ battle_data.reward.required_level }}
+                    </div>
+                    <div
+                      class="tt-stats"
+                      v-if="
+                        battle_data.reward.stats &&
+                        battle_data.reward.stats.length
+                      "
+                    >
+                      Stats:
+                      <div
+                        v-for="(stat, sidx) in battle_data.reward.stats"
+                        :key="sidx"
+                        class="tt-stat"
+                      >
+                        {{ statLabels[stat.name] || stat.name }}:
+                        <span>
+                          {{
+                            ["crit_rate", "hit_rate", "lifesteal"].includes(
+                              stat.name
+                            )
+                              ? stat.value + "%"
+                              : stat.value
+                          }}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            </template>
-          </div>
-        </div>
-        <!-- End Rewards Section -->
-        <div class="rounds-toggle">
-          <button v-if="!showRounds" class="battle-btn" @click="showRounds = true">Show detailed rounds</button>
-          <button v-else class="battle-btn" @click="showRounds = false">Show less details</button>
-        </div>
-        <transition name="fade">
-          <div v-if="showRounds" class="rounds-section">
-            <h2>Rounds</h2>
-            <div v-for="(roundData, roundKey) in filteredRounds" :key="roundKey" class="round-card">
-              <div class="round-header">
-                <h3>Round {{ roundData.Round }}</h3>
-                <button class="battle-btn small" @click="toggle(roundKey)">
-                  {{ expanded[roundKey] ? 'Hide details' : 'Round details' }}
-                </button>
-              </div>
-              <transition name="fade">
-                <table v-if="expanded[roundKey]" class="battle-table">
-                  <thead>
-                    <tr>
-                      <th>Action</th>
-                      <th>Player</th>
-                      <th>NPC</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="(val, key) in roundData.Player" :key="key">
-                      <td><strong>{{ statLabels[key] }}</strong></td>
-                      <td>
-                        <strong>
-                          {{ typeof roundData.Player[key] === 'number' ? roundData.Player[key].toFixed(2) : roundData.Player[key] }}
-                          <span v-if="['crit_rate', 'hit_rate'].includes(key)">%</span>
-                        </strong>
-                      </td>
-                      <td>
-                        <strong>
-                          {{ typeof roundData.NPC[key] === 'number' ? roundData.NPC[key].toFixed(2) : roundData.NPC[key] }}
-                          <span v-if="['crit_rate', 'hit_rate'].includes(key)">%</span>
-                        </strong>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </transition>
+              </template>
             </div>
           </div>
-        </transition>
+          <!-- End Rewards Section -->
+          <div class="rounds-toggle">
+            <button
+              v-if="!showRounds"
+              class="battle-btn"
+              @click="showRounds = true"
+            >
+              Show detailed rounds
+            </button>
+            <button v-else class="battle-btn" @click="showRounds = false">
+              Show less details
+            </button>
+          </div>
+          <transition name="fade">
+            <div v-if="showRounds" class="rounds-section">
+              <h2>Rounds</h2>
+              <div
+                v-for="(roundData, roundKey) in filteredRounds"
+                :key="roundKey"
+                class="round-card"
+              >
+                <div class="round-header">
+                  <h3>Round {{ roundData.Round }}</h3>
+                  <button class="battle-btn small" @click="toggle(roundKey)">
+                    {{ expanded[roundKey] ? "Hide details" : "Round details" }}
+                  </button>
+                </div>
+                <transition name="fade">
+                  <table v-if="expanded[roundKey]" class="battle-table">
+                    <thead>
+                      <tr>
+                        <th>Action</th>
+                        <th>Player</th>
+                        <th>NPC</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="(val, key) in roundData.Player" :key="key">
+                        <td>
+                          <strong>{{ statLabels[key] }}</strong>
+                        </td>
+                        <td>
+                          <strong>
+                            {{
+                              typeof roundData.Player[key] === "number"
+                                ? roundData.Player[key].toFixed(2)
+                                : roundData.Player[key]
+                            }}
+                            <span v-if="['crit_rate', 'hit_rate'].includes(key)"
+                              >%</span
+                            >
+                          </strong>
+                        </td>
+                        <td>
+                          <strong>
+                            {{
+                              typeof roundData.NPC[key] === "number"
+                                ? roundData.NPC[key].toFixed(2)
+                                : roundData.NPC[key]
+                            }}
+                            <span v-if="['crit_rate', 'hit_rate'].includes(key)"
+                              >%</span
+                            >
+                          </strong>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </transition>
+              </div>
+            </div>
+          </transition>
+        </div>
+        <div class="battle-footer">
+          <button class="battle-btn heal" @click="heal">Heal</button>
+        </div>
+        <div
+          v-if="backendMessage"
+          :class="['backend-toast', backendMessageType]"
+        >
+          {{ backendMessage }}
+        </div>
       </div>
-      <div class="battle-footer">
-        <button class="battle-btn heal" @click="heal">Heal</button>
+      <div v-if="showDungeon" class="battle-tab-content">
+        <h2>Dungeon Battle</h2>
+        <div class="battle-header">
+          <!-- Dungeon difficulty buttons removed, only present in activeTab === 'dungeon' block -->
+        </div>
+        <div v-if="dungeonBattleData && typeof dungeonBattleData === 'object'">
+          <!-- Dungeon battle results removed, only present in activeTab === 'dungeon' block -->
+        </div>
       </div>
-      <div v-if="backendMessage" :class="['backend-toast', backendMessageType]">
-        {{ backendMessage }}
+      <div v-if="showTierDungeon" class="battle-tab-content">
+        <TierDungeon />
+      </div>
+      <div v-if="activeTab === 'dungeon'">
+        <template v-if="loadingProfile">
+          <div class="loading-profile">Loading profile...</div>
+        </template>
+        <template v-else-if="profile && profile.level < 10">
+          <div class="unlock-message">
+            Dungeon Battle is unlocked at level 10
+          </div>
+        </template>
+        <template v-else-if="profile && profile.level >= 10">
+          <div class="dungeon-difficulty-buttons">
+            <button
+              class="battle-btn"
+              @click="startDungeonBattle('easy_dungeon')"
+            >
+              Easy Dungeon
+            </button>
+            <button
+              class="battle-btn"
+              @click="startDungeonBattle('medium_dungeon')"
+            >
+              Medium Dungeon
+            </button>
+            <button
+              class="battle-btn"
+              @click="startDungeonBattle('hard_dungeon')"
+            >
+              Hard Dungeon
+            </button>
+          </div>
+          <div
+            v-if="dungeonBattleData && typeof dungeonBattleData === 'object'"
+          >
+            <div class="dungeon-summary">
+              <p class="winner">
+                <span class="trophy">🏆</span>
+                Winner:
+                <span class="winner-name">{{ dungeonBattleData.winner }}</span>
+              </p>
+              <div class="rewards-section">
+                <h3 class="rewards-title">Rewards</h3>
+                <div class="rewards-list">
+                  <span class="reward-label">EXP:</span>
+                  <span class="reward-value">{{
+                    dungeonBattleData.exp_gained
+                  }}</span>
+                  <span class="reward-label">Gold:</span>
+                  <span class="reward-value">{{
+                    dungeonBattleData.gold_earned
+                  }}</span>
+                  <template v-if="dungeonBattleData.reward">
+                    <span class="reward-label">Item:</span>
+                    <div class="tooltip-container reward-item">
+                      <img
+                        :src="
+                          generateImageName(
+                            dungeonBattleData.reward.name,
+                            dungeonBattleData.reward.rarity
+                          )
+                        "
+                        :alt="dungeonBattleData.reward.name"
+                        class="item-icon"
+                        @error="handleImageError"
+                      />
+                      <div class="custom-tooltip">
+                        <div
+                          class="tt-font-name"
+                          :class="`rarity-${dungeonBattleData.reward.rarity}`"
+                        >
+                          {{ dungeonBattleData.reward.name }}
+                        </div>
+                        <div class="tt-font">
+                          Required Level:
+                          {{ dungeonBattleData.reward.required_level }}
+                        </div>
+                        <div
+                          class="tt-stats"
+                          v-if="
+                            dungeonBattleData.reward.stats &&
+                            dungeonBattleData.reward.stats.length
+                          "
+                        >
+                          Stats:
+                          <div
+                            v-for="(stat, sidx) in dungeonBattleData.reward
+                              .stats"
+                            :key="sidx"
+                            class="tt-stat"
+                          >
+                            {{ statLabels[stat.name] || stat.name }}:
+                            <span>
+                              {{
+                                ["crit_rate", "hit_rate", "lifesteal"].includes(
+                                  stat.name
+                                )
+                                  ? stat.value + "%"
+                                  : stat.value
+                              }}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </template>
+                </div>
+              </div>
+            </div>
+            <div class="rounds-toggle">
+              <button
+                v-if="!showDungeonRounds"
+                class="battle-btn"
+                @click="showDungeonRounds = true"
+              >
+                Show detailed battles
+              </button>
+              <button
+                v-else
+                class="battle-btn"
+                @click="showDungeonRounds = false"
+              >
+                Show less details
+              </button>
+            </div>
+            <transition name="fade">
+              <div v-if="showDungeonRounds" class="dungeon-battles-section">
+                <h2>Dungeon Battles</h2>
+                <div
+                  v-for="(battle, battleIdx) in getDungeonBattles()"
+                  :key="battleIdx"
+                  class="dungeon-battle-card"
+                >
+                  <h3>Battle {{ battleIdx + 1 }}: difficulty</h3>
+                  <div
+                    v-for="(roundData, roundIdx) in getBattleRounds(battle)"
+                    :key="roundIdx"
+                    class="round-card"
+                  >
+                    <div
+                      class="round-header"
+                      style="
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                      "
+                    >
+                      <div style="display: flex; align-items: center; gap: 1em">
+                        <h4 style="margin: 0">Round</h4>
+                        <span class="round-number">{{ roundData.Round }}</span>
+                      </div>
+                      <button
+                        class="battle-btn small"
+                        @click="toggleDungeon(battleIdx, roundIdx)"
+                      >
+                        {{
+                          dungeonExpanded[battleIdx] &&
+                          dungeonExpanded[battleIdx][roundIdx]
+                            ? "Hide details"
+                            : "Round details"
+                        }}
+                      </button>
+                    </div>
+                    <transition name="fade">
+                      <table
+                        v-if="
+                          dungeonExpanded[battleIdx] &&
+                          dungeonExpanded[battleIdx][roundIdx]
+                        "
+                        class="battle-table"
+                      >
+                        <thead>
+                          <tr>
+                            <th>Action</th>
+                            <th>Player</th>
+                            <th>NPC</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr
+                            v-for="key in Object.keys(
+                              roundData[getPlayerName(roundData)] || {}
+                            )"
+                            :key="key"
+                          >
+                            <td>
+                              <strong>{{ statLabels[key] || key }}</strong>
+                            </td>
+                            <td>
+                              <strong>
+                                {{
+                                  typeof roundData[getPlayerName(roundData)][
+                                    key
+                                  ] === "number"
+                                    ? roundData[getPlayerName(roundData)][
+                                        key
+                                      ].toFixed(2)
+                                    : roundData[getPlayerName(roundData)][key]
+                                }}
+                                <span
+                                  v-if="['crit_rate', 'hit_rate'].includes(key)"
+                                  >%</span
+                                >
+                              </strong>
+                            </td>
+                            <td>
+                              <strong>
+                                {{
+                                  typeof roundData.NPC[key] === "number"
+                                    ? roundData.NPC[key].toFixed(2)
+                                    : roundData.NPC[key]
+                                }}
+                                <span
+                                  v-if="['crit_rate', 'hit_rate'].includes(key)"
+                                  >%</span
+                                >
+                              </strong>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </transition>
+                  </div>
+                </div>
+              </div>
+            </transition>
+          </div>
+        </template>
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-
-
 .battle-panel {
   background: linear-gradient(180deg, #22171b 80%, #181012 100%);
   border-radius: 24px;
@@ -244,7 +673,7 @@ function handleImageError(event) {
   margin: 0 auto;
   border: 2.5px solid #6a0f19;
   position: relative;
-  font-family: 'Cinzel', serif;
+  font-family: "Cinzel", serif;
 }
 
 .battle-header {
@@ -261,14 +690,15 @@ function handleImageError(event) {
   border-radius: 10px;
   padding: 0.8rem 2.2rem;
   font-size: 1.1rem;
-  font-family: 'Cinzel', serif;
+  font-family: "Cinzel", serif;
   font-weight: bold;
   box-shadow: 0 2px 8px #181012;
   cursor: pointer;
   transition: background 0.2s, border-color 0.2s, color 0.2s;
   margin-bottom: 0.5rem;
 }
-.battle-btn:hover, .battle-btn:focus {
+.battle-btn:hover,
+.battle-btn:focus {
   background: linear-gradient(90deg, #6a0f19 60%, #2d161a 100%);
   color: #fffbe6;
   border-color: #ffe600;
@@ -300,7 +730,7 @@ function handleImageError(event) {
 .winner {
   font-size: 1.3rem;
   color: #e7d7b1;
-  font-family: 'Cinzel', serif;
+  font-family: "Cinzel", serif;
   margin-bottom: 1.5rem;
   text-align: center;
   text-shadow: 0 1px 6px #181012;
@@ -330,7 +760,7 @@ function handleImageError(event) {
 
 .rewards-title {
   color: #ffe600;
-  font-family: 'Cinzel', serif;
+  font-family: "Cinzel", serif;
   font-size: 1.3rem;
   margin-bottom: 0.7rem;
   text-shadow: 0 1px 6px #181012;
@@ -347,12 +777,12 @@ function handleImageError(event) {
 .reward-label {
   color: #ffe600;
   font-weight: bold;
-  font-family: 'Cinzel', serif;
+  font-family: "Cinzel", serif;
 }
 
 .reward-value {
   color: #e7d7b1;
-  font-family: 'Cinzel', serif;
+  font-family: "Cinzel", serif;
 }
 
 .reward-item {
@@ -388,7 +818,7 @@ function handleImageError(event) {
   color: #ffe600;
   border: 1.5px solid #ffe600;
   box-shadow: 0 2px 8px #ffe60044;
-  font-family: 'Cinzel', serif;
+  font-family: "Cinzel", serif;
   padding: 0.75rem 1rem;
   min-width: 180px;
   pointer-events: none;
@@ -428,7 +858,7 @@ function handleImageError(event) {
   color: #ffe600;
   font-size: 1.1rem;
   margin: 0;
-  font-family: 'Cinzel', serif;
+  font-family: "Cinzel", serif;
   text-shadow: 0 1px 6px #181012;
 }
 
@@ -440,10 +870,11 @@ function handleImageError(event) {
   border-radius: 10px;
   overflow: hidden;
   margin-bottom: 1rem;
-  font-family: 'Cinzel', serif;
+  font-family: "Cinzel", serif;
 }
 
-.battle-table th, .battle-table td {
+.battle-table th,
+.battle-table td {
   border: 1.5px solid #2d161a;
   padding: 0.7rem 1rem;
   text-align: center;
@@ -503,10 +934,87 @@ function handleImageError(event) {
 }
 
 /* Fade transition for rounds */
-.fade-enter-active, .fade-leave-active {
+.fade-enter-active,
+.fade-leave-active {
   transition: opacity 0.3s;
 }
-.fade-enter-from, .fade-leave-to {
+.fade-enter-from,
+.fade-leave-to {
   opacity: 0;
+}
+
+.navbar-fantasy {
+  width: 100%;
+  background: linear-gradient(90deg, #23181a 80%, #181012 100%);
+  border-bottom: 2px solid #3a2323;
+  box-shadow: 0 2px 16px #000a, 0 0 0 2px #3a2323;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.7rem 2.5rem;
+  font-family: "Cinzel", serif;
+  border-radius: 14px 14px 0 0;
+  margin-bottom: 2rem;
+}
+.navbar-links {
+  list-style: none;
+  display: flex;
+  gap: 2.2rem;
+  margin: 0;
+  padding: 0;
+  justify-content: center;
+  flex: 1;
+}
+.navbar-links li {
+  display: flex;
+  align-items: center;
+}
+.navbar-links a {
+  color: #e0cfa9;
+  font-size: 1.15rem;
+  font-family: "Cinzel", serif;
+  text-decoration: none;
+  padding: 0.3rem 1.1rem;
+  border-radius: 8px;
+  transition: background 0.2s, color 0.2s;
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+.navbar-links a:hover,
+.navbar-links .active-link {
+  background: #3a2323;
+  color: #f5e6c8;
+  box-shadow: 0 2px 8px #0005;
+}
+.round-number {
+  font-size: 1.1rem;
+  color: #ffe600;
+  font-weight: bold;
+  margin-left: 0.3em;
+}
+@media (max-width: 700px) {
+  .navbar-fantasy {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 0.7rem 1rem;
+  }
+  .navbar-links {
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-top: 0.5rem;
+  }
+}
+
+.loading-profile {
+  color: #ffe600;
+  font-size: 1.2rem;
+  text-align: center;
+  margin: 2rem 0;
+}
+.unlock-message {
+  color: #ffe600;
+  font-size: 1.2rem;
+  text-align: center;
+  margin: 2rem 0;
 }
 </style>
