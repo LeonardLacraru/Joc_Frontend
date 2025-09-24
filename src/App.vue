@@ -126,8 +126,8 @@ watch(isLoggedIn, (newVal) => {
         </router-link>
       </li>
       <li v-if="isLoggedIn && profile?.is_admin">
-        <router-link to="/adminpanel" class="nav-link">
-          Admin Panel
+        <router-link to="/village" class="nav-link">
+          Village
         </router-link>
       </li>
     </ul>

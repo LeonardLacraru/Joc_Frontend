@@ -1,20 +1,13 @@
 <script setup>
 import { ref } from 'vue';
 import { authFetch } from '@/utils/authFetch';
+import { useBackendMessage } from "../utils/useBackendMessage.js";
 
+const { backendMessage, backendMessageType, showBackendMessage } = useBackendMessage();
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const guildName = ref('');
 const guildDescription = ref('');
-const backendMessage = ref('');
-const backendMessageType = ref('');
 
-function showBackendMessage(msg, type = 'info') {
-  backendMessage.value = msg;
-  backendMessageType.value = type;
-  setTimeout(() => {
-    backendMessage.value = '';
-  }, 3500);
-}
 
 async function createGuild() {
     try {

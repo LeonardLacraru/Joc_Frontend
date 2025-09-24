@@ -1,14 +1,14 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { authFetch } from "../utils/authFetch.js";
+import { useBackendMessage } from "../utils/useBackendMessage.js";
 
+const { backendMessage, backendMessageType, showBackendMessage } = useBackendMessage();
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const selectedTier = ref(1);
 const battleData = ref(null);
 const expanded = ref({});
 const showRounds = ref(false);
-const backendMessage = ref("");
-const backendMessageType = ref("");
 const dropdownOpen = ref(false);
 const profile = ref(null);
 const loadingProfile = ref(true);
@@ -35,14 +35,6 @@ const statLabels = {
   lifesteal: "Lifesteal",
   total_hp: "Total HP",
 };
-
-function showBackendMessage(msg, type = "info") {
-  backendMessage.value = msg;
-  backendMessageType.value = type;
-  setTimeout(() => {
-    backendMessage.value = "";
-  }, 3500);
-}
 
 async function startTierDungeonBattle() {
   showRounds.value = false;

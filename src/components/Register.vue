@@ -2,7 +2,9 @@
 import { ref } from "vue";
 import { useRouter } from "vue-router";
 import "../assets/form.css";
+import { useBackendMessage } from "../utils/useBackendMessage.js";
 
+const { backendMessage, backendMessageType, showBackendMessage } = useBackendMessage();
 const email = ref("");
 const character_name = ref("");
 const password = ref("");
@@ -11,17 +13,6 @@ const race = ref("");
 const username = ref("");
 const router = useRouter();
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-
-const backendMessage = ref('');
-const backendMessageType = ref('');
-
-function showBackendMessage(msg, type = 'info') {
-  backendMessage.value = msg;
-  backendMessageType.value = type;
-  setTimeout(() => {
-    backendMessage.value = '';
-  }, 3500);
-}
 
 async function handleRegister(e) {
   e.preventDefault();

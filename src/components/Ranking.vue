@@ -3,26 +3,18 @@ import { ref, onMounted, computed } from 'vue';
 import { authFetch } from '../utils/authFetch.js';
 import router from '@/router/index.js';
 import { pvp_battle_data } from '../utils/public_variables.js';
+import { useBackendMessage } from "../utils/useBackendMessage.js";
 
+const { backendMessage, backendMessageType, showBackendMessage } = useBackendMessage();
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const rankingType = ref('players'); // 'players' or 'guilds'
 const ranking = ref([]);
 const loading = ref(false);
-
-const backendMessage = ref('');
-const backendMessageType = ref(''); // e.g. 'error', 'success'
-
 const showJoinModal = ref(false);
 const joinDescription = ref('');
 const joinGuildId = ref(null);
 
-function showBackendMessage(msg, type = 'info') {
-  backendMessage.value = msg;
-  backendMessageType.value = type;
-  setTimeout(() => {
-    backendMessage.value = '';
-  }, 3500);
-}
+
 
 async function fetchPlayersRanking() {
     loading.value = true;

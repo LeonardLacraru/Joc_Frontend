@@ -2,17 +2,13 @@
 
 import { ref } from 'vue';
 import { authFetch } from '../utils/authFetch.js';
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-const backendMessage = ref('');
-const backendMessageType = ref('');
+import { useBackendMessage } from "../utils/useBackendMessage.js";
 
-function showBackendMessage(msg, type = 'info') {
-  backendMessage.value = msg;
-  backendMessageType.value = type;
-  setTimeout(() => {
-    backendMessage.value = '';
-  }, 3500);
-}
+const { backendMessage, backendMessageType, showBackendMessage } = useBackendMessage();
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
+
+
 
 async function CreateEvent() {
   try {

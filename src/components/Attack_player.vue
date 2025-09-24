@@ -2,7 +2,9 @@
 import { ref, computed } from 'vue';
 import { authFetch } from '../utils/authFetch.js';
 import { pvp_battle_data } from '../utils/public_variables.js';
+import { useBackendMessage } from "../utils/useBackendMessage.js";
 
+const { backendMessage, backendMessageType, showBackendMessage } = useBackendMessage();
 const expanded = ref({});
 const showRounds = ref(false);
 const statLabels = {

@@ -2,6 +2,7 @@
 import { ref, onMounted, computed } from 'vue';
 import { authFetch } from '@/utils/authFetch';
 import { useRouter } from 'vue-router';
+import { useBackendMessage } from "../utils/useBackendMessage.js";
 const router = useRouter();
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -12,20 +13,10 @@ const levelUpLoading = ref(false);
 const showLeaveConfirm = ref(false);
 const showGuildInfo = ref(true); // New reactive variable
 const showRequests = ref(false); // New reactive variable
+const { backendMessage, backendMessageType, showBackendMessage } = useBackendMessage();
 
-// Dummy online/offline for demo; replace with real status if available
 const isOnline = (member) => true; // or your logic
 
-const backendMessage = ref('');
-const backendMessageType = ref(''); // e.g. 'error', 'success'
-
-function showBackendMessage(msg, type = 'info') {
-  backendMessage.value = msg;
-  backendMessageType.value = type;
-  setTimeout(() => {
-    backendMessage.value = '';
-  }, 3500);
-}
 
 async function fetchGuilds() {
     try {

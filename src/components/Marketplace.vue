@@ -2,7 +2,9 @@
 import { authFetch } from "../utils/authFetch.js";
 import { ref, computed, onMounted } from "vue";
 import "../assets/inventory.css";
+import { useBackendMessage } from "../utils/useBackendMessage.js";
 
+const { backendMessage, backendMessageType, showBackendMessage } = useBackendMessage();
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const inventory = ref([]);
 const loading = ref(true);
@@ -197,18 +199,6 @@ async function CancelSell(itemId) {
     return err.message;
   }
 }
-
-const backendMessage = ref('');
-const backendMessageType = ref('');
-
-function showBackendMessage(msg, type = 'info') {
-  backendMessage.value = msg;
-  backendMessageType.value = type;
-  setTimeout(() => {
-    backendMessage.value = '';
-  }, 3500);
-}
-
 </script>
 
 <template>

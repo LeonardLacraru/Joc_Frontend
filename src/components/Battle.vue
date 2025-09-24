@@ -2,7 +2,9 @@
 import { authFetch } from "../utils/authFetch.js";
 import { ref, computed, onMounted } from "vue";
 import TierDungeon from "./TierDungeon.vue";
+import { useBackendMessage } from "../utils/useBackendMessage.js";
 
+const { backendMessage, backendMessageType, showBackendMessage } = useBackendMessage();
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const battle_data = ref(null);
 const expanded = ref({});
@@ -29,17 +31,6 @@ const statLabels = {
   lifesteal: "Lifesteal",
   total_hp: "Total HP",
 };
-
-const backendMessage = ref("");
-const backendMessageType = ref("");
-
-function showBackendMessage(msg, type = "info") {
-  backendMessage.value = msg;
-  backendMessageType.value = type;
-  setTimeout(() => {
-    backendMessage.value = "";
-  }, 3500);
-}
 
 async function startBattle(selectedDifficulty) {
   const payload = {
@@ -153,6 +144,12 @@ function generateImageName(itemName) {
 }
 function handleImageError(event) {
   event.target.src = new URL("../assets/items/image.png", import.meta.url).href;
+}
+
+function generateStoneName(stoneName){
+  if (!stoneName)
+    return new URL("@/assets/stones/default-item-icon.png", import.meta.url).href;
+  return new URL(`../assets/stones/${stoneName.toLowerCase()}.png`, import.meta.url).href;
 }
 
 const showClassic = ref(true);
@@ -535,6 +532,24 @@ onMounted(async () => {
                       </div>
                     </div>
                   </template>
+                  <template v-if="dungeonBattleData.enchant_reward">
+                  <div class ="tooltip-container reward-item">
+                  <img
+                    :src="generateStoneName(dungeonBattleData.enchant_reward.name)"
+                    :alt="dungeonBattleData.enchant_reward.name"
+                    class="item-icon"
+                    @error="handleImageError"
+                  />
+                  <div class="custom-tooltip">
+                    <div class="tt-font-name rarity-unique">
+                      {{ dungeonBattleData.enchant_reward.display_name }}
+                    </div>
+                    <div class="tt-stat">
+                       {{ dungeonBattleData.enchant_reward.description }}
+                    </div>
+                  </div>
+                  </div>
+                </template>
                 </div>
               </div>
             </div>

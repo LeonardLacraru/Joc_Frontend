@@ -11,6 +11,8 @@ import Guild from "@/components/Guild.vue";
 import CreateGuild from "@/components/CreateGuild.vue"; 
 import WorldBoss from "@/components/WorldBoss.vue";
 import AdminPanel from "@/components/AdminPanel.vue";
+import Village from "@/components/Village.vue"; 
+import Blacksmith from "@/components/Blacksmith.vue";
 
 const routes = [
   { path: "/", component: Home },
@@ -25,6 +27,8 @@ const routes = [
   {path: "/create_guild", component: CreateGuild, meta: { requiresAuth: true } },
   {path:"/worldboss", component: WorldBoss, meta:{requestAuth: true}}, // Protected route
   {path:"/adminpanel", component: AdminPanel, meta:{requiresAuth: true}}, // Protected route
+  {path:"/village", component: Village, meta: { requiresAuth: true}}, 
+  {path:"/blacksmith", component: Blacksmith, meta: { requiresAuth: true}}, 
 ];
 
 const router = createRouter({
