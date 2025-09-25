@@ -306,7 +306,7 @@ const equippedByType = computed(() => {
                     class="tt-font-name"
                     :class="`rarity-${equippedByType[slot.type].item.rarity}`"
                   >
-                    {{ equippedByType[slot.type].item.name }}
+                    {{ equippedByType[slot.type].item.name }} +{{ equippedByType[slot.type].item.enchant_level }}
                   </div>
                   <div class="tt-font">
                     Required Level:
@@ -314,9 +314,6 @@ const equippedByType = computed(() => {
                   </div>
                   <div class="tt-font">
                     Sell: {{ equippedByType[slot.type].item.required_gold }} 🟡
-                  </div>
-                  <div class="tt-font">
-                    Enchant level: {{ equippedByType[slot.type].item.enchant_level }}
                   </div>
                   <div
                     class="tt-stats"
@@ -442,7 +439,8 @@ const equippedByType = computed(() => {
       :error="error"
       :showButton="showButton"
       @equipItem="equipItem"
-      @sellItem="sellItem"></Inventory>
+      @sellItem="sellItem"
+      @refreshProfile="fetchProfile"></Inventory>
    </div> 
 </template>
 

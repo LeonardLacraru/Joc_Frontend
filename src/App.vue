@@ -116,11 +116,6 @@ watch(isLoggedIn, (newVal) => {
         </router-link>
       </li>
       <li v-if="isLoggedIn">
-        <router-link to="/guild" class="nav-link">
-          Guild
-        </router-link>
-      </li>
-      <li v-if="isLoggedIn">
         <router-link to="/worldboss" class="nav-link">
           World Boss
         </router-link>

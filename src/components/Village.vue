@@ -12,7 +12,11 @@
       class="house-link blacksmith-house"
       title="Go to Blacksmith">
     </router-link>
-    <!-- Add more router-links for other houses as needed -->
+    <router-link
+      to="/garden"
+      class="house-link garden"
+      title="Go to Garden">
+    </router-link>
   </div>
 </template>
 
@@ -49,5 +53,12 @@
   top: 70px;    /* Y position */
   width: 180px;  /* clickable area width */
   height: 220px; /* clickable area height */
+}
+
+.garden {
+  left: 370px;   /* X position */
+  top: 300px;    /* Y position */
+  width: 200px;  /* clickable area width */
+  height: 150px; /* clickable area height */
 }
 </style>

@@ -1,12 +1,14 @@
 <script setup>
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, computed, defineEmits } from "vue";
 import { authFetch } from "../utils/authFetch.js";
 import "../assets/inventory.css";
 import { useBackendMessage } from "../utils/useBackendMessage.js";
 
 //Declarations
+const emit = defineEmits(["refreshProfile", "select-item"]);
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-const { backendMessage, backendMessageType, showBackendMessage } = useBackendMessage();
+const { backendMessage, backendMessageType, showBackendMessage } =
+  useBackendMessage();
 const inventory = ref([]);
 const loading = ref(true);
 const error = ref(null);
@@ -34,15 +36,6 @@ const statLabels = {
   phys_def: "Physical Defense",
   strength: "Strength",
 };
-
-const equipmentSlots = [
-  { type: "weapon", class: "weapon-slot" },
-  { type: "helmet", class: "helmet-slot" },
-  { type: "armor", class: "armor-slot", big: true },
-  { type: "pants", class: "leggings-slot", big: true },
-  { type: "boots", class: "boots-slot" },
-  { type: "gloves", class: "gloves-slot" },
-];
 
 onMounted(async () => {
   // Always fetch profile data
@@ -72,7 +65,6 @@ async function fetchProfile() {
       equippedItems.value = data.equipped_items || 0;
       current_hp.value = data.stats.current_hp || 0;
       loading.value = false;
-      await getStatsCost();
       console.log("Profile data fetched successfully:", profile.value);
       return null;
     } else {
@@ -109,6 +101,7 @@ async function equipItem(itemId) {
     );
     if (response.ok) {
       showBackendMessage("Item equipped!", "success");
+      emit('refreshProfile');
       await fetchProfile(); // Refresh profile after equipping
     } else {
       const errData = await response.json();
@@ -143,64 +136,63 @@ async function sellItem(itemId) {
     return err.message;
   }
 }
-
 </script>
 
 <template>
-    <div class="inventory-grid">
-      <div v-for="item in gridInventory" class="inventory-item">
-        <template v-if="item">
-          <div class="tooltip-container">
-            <img
-              :src="generateImageName(item.item.name)"
-              :alt="item.name"
-              class="item-icon"
-              @error="handleImageError"
-            />
-            <div class="custom-tooltip">
-              <div class="tt-font-name" :class="`rarity-${item.item.rarity}`">
-                {{ item.item.name }}
-              </div>
-              <div class="tt-font">
-                Required Level: {{ item.item.required_level }}
-              </div>
-              <div class="tt-font">Sell: {{ item.item.required_gold }} 🟡</div>
+  <div class="inventory-grid">
+    <div v-for="item in gridInventory" class="inventory-item">
+      <template v-if="item">
+        <div class="tooltip-container" @click="$emit('select-item', item)">
+          <img
+            :src="generateImageName(item.item.name)"
+            :alt="item.name"
+            class="item-icon"
+            @error="handleImageError"
+          />
+          <div class="custom-tooltip">
+            <div class="tt-font-name" :class="`rarity-${item.item.rarity}`">
+              {{ item.item.name }} +{{ item.item.enchant_level }} 
+            </div>
+            <div class="tt-font">
+              Required Level: {{ item.item.required_level }}
+            </div>
+            <div class="tt-font">Sell: {{ item.item.required_gold }} 🟡</div>
+            <div
+              class="tt-stats"
+              v-if="item.item.stats && item.item.stats.length"
+            >
+              Stats:
               <div
-                class="tt-stats"
-                v-if="item.item.stats && item.item.stats.length"
+                v-for="(stat, sidx) in item.item.stats"
+                :key="sidx"
+                class="tt-stat"
               >
-                Stats:
-                <div
-                  v-for="(stat, sidx) in item.item.stats"
-                  :key="sidx"
-                  class="tt-stat"
-                >
-                  {{ statLabels[stat.name] || stat.name }}:
-                  <span>
-                    {{
-                      ["crit_rate", "hit_rate", "lifesteal"].includes(stat.name)
-                        ? stat.value + "%"
-                        : stat.value
-                    }}
-                  </span>
-                </div>
+                {{ statLabels[stat.name] || stat.name }}:
+                <span>
+                  {{
+                    ["crit_rate", "hit_rate", "lifesteal"].includes(stat.name)
+                      ? stat.value + "%"
+                      : stat.value
+                  }}
+                </span>
               </div>
             </div>
-            <button class="inventory-action-btn" @click="equipItem(item.id)">
-              Equip
-            </button>
-            <button
-              class="inventory-action-btn"
-              v-if="showButton"
-              @click="sellItem(item.id)"
-            >
-              Sell
-            </button>
           </div>
-        </template>
-        <template v-else>
-          <div class="item-icon" style="opacity: 0.2">Empty</div>
-        </template>
+          <button class="inventory-action-btn" @click.stop="equipItem(item.id)">
+            Equip
+          </button>
+          <button
+            class="inventory-action-btn"
+            v-if="showButton"
+            @click.stop="sellItem(item.id)"
+          >
+            Sell
+          </button>
         </div>
+      </template>
+      <template v-else>
+        <div class="item-icon" style="opacity: 0.2">Empty</div>
+      </template>
     </div>
+  </div>
 </template>
