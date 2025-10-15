@@ -1,68 +1,75 @@
 <script setup>
-
-import { ref } from 'vue';
-import { authFetch } from '../utils/authFetch.js';
+import { ref } from "vue";
+import { authFetch } from "../utils/authFetch.js";
 import { useBackendMessage } from "../utils/useBackendMessage.js";
 
-const { backendMessage, backendMessageType, showBackendMessage } = useBackendMessage();
+const { backendMessage, backendMessageType, showBackendMessage } =
+  useBackendMessage();
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-
-
-
 
 async function CreateEvent() {
   try {
-    const response = await authFetch(`${API_BASE_URL}/world_boss/create_event/`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-    });
+    const response = await authFetch(
+      `${API_BASE_URL}/world_boss/create_event/`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      }
+    );
     if (response.ok) {
-      const data = await response.json();  
+      const data = await response.json();
       console.log(data);
       showBackendMessage("You joined the world boss hunt!", "success");
       return null;
+      //uttytyt
     } else {
       const errData = await response.json();
       console.error("Error participating:", errData);
-      showBackendMessage(errData.detail || JSON.stringify(errData), 'error');
+      showBackendMessage(errData.detail || JSON.stringify(errData), "error");
     }
-  }
-  catch (err) {
-    showBackendMessage(err.message, 'error');
+  } catch (err) {
+    showBackendMessage(err.message, "error");
     return err.message;
   }
 }
 
 async function Start_World_Boss() {
   try {
-    const response = await authFetch(`${API_BASE_URL}/world_boss/start_wb_event/`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-    });
+    const response = await authFetch(
+      `${API_BASE_URL}/world_boss/start_wb_event/`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      }
+    );
     if (response.ok) {
       const data = await response.json();
-      console.log( data);
+      console.log(data);
       showBackendMessage("You joined the world boss hunt!", "success");
       return null;
     } else {
       const errData = await response.json();
       console.error("Error participating:", errData);
-      showBackendMessage(errData.detail || JSON.stringify(errData), 'error');
+      showBackendMessage(errData.detail || JSON.stringify(errData), "error");
     }
-  }
-  catch (err) {
-    showBackendMessage(err.message, 'error');
+  } catch (err) {
+    showBackendMessage(err.message, "error");
     return err.message;
   }
 }
-
-
 </script>
 <template>
   <div class="admin-panel">
     <h1>Admin Panel</h1>
-    <p>Welcome to the Admin Panel. Here you can manage users, monitor site activity, and perform administrative tasks.</p>
-    <button class="participate-btn" @click="CreateEvent">Create World Boss Hunt</button>
-    <button class="participate-btn" @click="Start_World_Boss">Start World Boss Hunt</button>
+    <p>
+      Welcome to the Admin Panel. Here you can manage users, monitor site
+      activity, and perform administrative tasks.
+    </p>
+    <button class="participate-btn" @click="CreateEvent">
+      Create World Boss Hunt
+    </button>
+    <button class="participate-btn" @click="Start_World_Boss">
+      Start World Boss Hunt
+    </button>
   </div>
 </template>
