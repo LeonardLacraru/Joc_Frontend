@@ -36,6 +36,12 @@ const statLabels = {
   total_hp: "Total HP",
 };
 
+function generateStoneName(stoneName){
+  if (!stoneName)
+    return new URL("@/assets/stones/default-item-icon.png", import.meta.url).href;
+  return new URL(`../assets/stones/${stoneName.toLowerCase()}.png`, import.meta.url).href;
+}
+
 async function startTierDungeonBattle() {
   showRounds.value = false;
   expanded.value = {};
@@ -49,6 +55,7 @@ async function startTierDungeonBattle() {
     const data = await response.json();
     if (response.ok) {
       battleData.value = data;
+      console.log(battleData.value)
       showBackendMessage("Tier Dungeon battle started!", "success");
     } else {
       showBackendMessage(data.error || data.detail || "Unknown error", "error");
@@ -210,7 +217,7 @@ onMounted(async () => {
                           {{
                             ["crit_rate", "hit_rate", "lifesteal"].includes(
                               stat.name
-                            )
+                          )
                               ? stat.value + "%"
                               : stat.value
                           }}
@@ -219,6 +226,24 @@ onMounted(async () => {
                     </div>
                   </div>
                 </div>
+              </template>
+              <template v-if="battleData.enchant_reward">
+                  <div class ="tooltip-container reward-item">
+                  <img
+                    :src="generateStoneName(battleData.enchant_reward.name)"
+                    :alt="battleData.enchant_reward.name"
+                    class="item-icon"
+                    @error="handleImageError"
+                  />
+                  <div class="custom-tooltip">
+                    <div class="tt-font-name rarity-unique">
+                      {{ battleData.enchant_reward.display_name }}
+                    </div>
+                    <div class="tt-stat">
+                        {{ battleData.enchant_reward.description }}
+                    </div>
+                  </div>
+                  </div>
               </template>
             </div>
           </div>
