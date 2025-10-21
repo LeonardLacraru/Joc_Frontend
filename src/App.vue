@@ -71,6 +71,17 @@ watch(isLoggedIn, (newVal) => {
     profile.value = null;
   }
 });
+
+// Navbar chapter expansion state
+const expandedChapters = ref({
+  profile: false,
+  activities: false,
+  town: false,
+});
+
+function toggleChapter(chapter) {
+  expandedChapters.value[chapter] = !expandedChapters.value[chapter];
+}
 </script>
 
 <template>
@@ -80,6 +91,7 @@ watch(isLoggedIn, (newVal) => {
       <span class="fs-4">Sidebar</span>
     </router-link> -->
     <ul class="nav nav-pills flex-column mb-auto">
+      <!-- Guest Links -->
       <li v-if="!isLoggedIn">
         <router-link to="/" class="nav-link active" aria-current="page">
           Home
@@ -95,40 +107,82 @@ watch(isLoggedIn, (newVal) => {
           Register
         </router-link>
       </li>
-      <li v-if="isLoggedIn">
-        <router-link to="/profile" class=" nav-link">
-          Profile
-        </router-link>
+
+      <!-- PROFILE Chapter -->
+      <li v-if="isLoggedIn" class="nav-chapter">
+        <div class="chapter-header" @click="toggleChapter('profile')">
+          <span class="chapter-icon">{{ expandedChapters.profile ? '▼' : '▶' }}</span>
+          <span class="chapter-title">PROFILE</span>
+        </div>
+        <ul v-show="expandedChapters.profile" class="subchapter-list">
+          <li>
+            <router-link to="/profile" class="nav-link subchapter">
+              Character
+            </router-link>
+          </li>
+          <li>
+            <router-link to="/guild" class="nav-link subchapter">
+              Guild
+            </router-link>
+          </li>
+        </ul>
       </li>
-      <li v-if="isLoggedIn">
-        <router-link to="/battle" class="nav-link">
-          Battle
-        </router-link>
+
+      <!-- TOWN Chapter -->
+      <li v-if="isLoggedIn" class="nav-chapter">
+        <div class="chapter-header" @click="toggleChapter('town')">
+          <span class="chapter-icon">{{ expandedChapters.town ? '▼' : '▶' }}</span>
+          <span class="chapter-title">TOWN</span>
+        </div>
+        <ul v-show="expandedChapters.town" class="subchapter-list">
+          <li>
+            <router-link to="/marketplace" class="nav-link subchapter">
+              Marketplace
+            </router-link>
+          </li>
+          <li>
+            <router-link to="/blacksmith" class="nav-link subchapter">
+              Blacksmith
+            </router-link>
+          </li>
+        </ul>
       </li>
+
+      <!-- ACTIVITIES Chapter -->
+      <li v-if="isLoggedIn" class="nav-chapter">
+        <div class="chapter-header" @click="toggleChapter('activities')">
+          <span class="chapter-icon">{{ expandedChapters.activities ? '▼' : '▶' }}</span>
+          <span class="chapter-title">ACTIVITIES</span>
+        </div>
+        <ul v-show="expandedChapters.activities" class="subchapter-list">
+          <li>
+            <router-link to="/battle" class="nav-link subchapter">
+              Battle
+            </router-link>
+          </li>
+          <li>
+            <router-link to="/garden" class="nav-link subchapter">
+              Lifeskill
+            </router-link>
+          </li>
+          <li>
+            <router-link to="/worldboss" class="nav-link subchapter">
+              World Boss
+            </router-link>
+          </li>
+        </ul>
+      </li>
+
+      <!-- Ranking (standalone) -->
       <li v-if="isLoggedIn">
         <router-link to="/ranking" class="nav-link">
           Ranking
         </router-link>
       </li>
-      <li v-if="isLoggedIn">
-        <router-link to="/marketplace" class="nav-link">
-          Marketplace
-        </router-link>
-      </li>
-      <li v-if="isLoggedIn">
-        <router-link to="/worldboss" class="nav-link">
-          World Boss
-        </router-link>
-      </li>
-      <li v-if="isLoggedIn && profile?.is_admin">
-        <router-link to="/village" class="nav-link">
-          Village
-        </router-link>
-      </li>
     </ul>
     <hr />
     <div v-if="isLoggedIn" class="dropdown">
-      <a href="#" class="d-flex align-items-center link-body-emphasis text-decoration-none dropdown-toggle"
+      <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle character-name-link"
         data-bs-toggle="dropdown" aria-expanded="false">
         <img
           :src="raceImage"
@@ -137,7 +191,7 @@ watch(isLoggedIn, (newVal) => {
           height="64"
           class="rounded-circle me-2"
         />
-        <strong>{{ profile?.character_name }}</strong>
+        <span class="character-name">{{ profile?.character_name }}</span>
       </a>
       <ul class="dropdown-menu text-small shadow">
         <li>
@@ -152,12 +206,42 @@ watch(isLoggedIn, (newVal) => {
 <style>
 /* Dark Fantasy RPG Sidebar Theme */
 .sidebar-fantasy {
-  background: linear-gradient(180deg, #22171b 70%, #181012 100%) !important;
+  background:
+    linear-gradient(180deg, rgba(26, 15, 21, 0.85) 0%, rgba(34, 23, 27, 0.9) 30%, rgba(45, 26, 31, 0.9) 70%, rgba(26, 15, 21, 0.85) 100%),
+    url('@/assets/navbar.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   color: #e7d7b1 !important;
   border-radius: 0.5rem;
-  box-shadow: 0 2px 16px rgba(40, 10, 20, 0.4);
+  box-shadow:
+    0 0 30px rgba(139, 69, 19, 0.3),
+    0 2px 16px rgba(40, 10, 20, 0.6),
+    inset 0 0 60px rgba(0, 0, 0, 0.4);
   min-height: 100vh;
-  border: 1.5px solid #2d161a;
+  border: 2px solid #4a2a1f;
+  border-left: 3px solid #6d3a2a;
+  position: relative;
+  overflow: hidden;
+}
+
+.sidebar-fantasy::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background:
+    radial-gradient(ellipse at top, rgba(139, 69, 19, 0.15) 0%, transparent 50%),
+    radial-gradient(ellipse at bottom, rgba(75, 0, 130, 0.1) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.sidebar-fantasy > * {
+  position: relative;
+  z-index: 1;
 }
 
 .sidebar-fantasy .nav-link,
@@ -210,5 +294,92 @@ watch(isLoggedIn, (newVal) => {
 
 .sidebar-fantasy .rounded-circle {
   border: 2px solid #6a0f19;
+}
+
+.character-name-link {
+  color: #e7d7b1 !important;
+}
+
+.character-name {
+  color: #e7d7b1 !important;
+  font-family: 'Cinzel', serif;
+  font-size: 1.1rem;
+  font-weight: normal;
+}
+
+/* Chapter/Subchapter Styles */
+.nav-chapter {
+  margin-bottom: 0.5rem;
+}
+
+.chapter-header {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  border-radius: 0.4rem;
+  transition: all 0.3s ease;
+  user-select: none;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid transparent;
+}
+
+.chapter-header:hover {
+  background: linear-gradient(90deg, rgba(139, 69, 19, 0.3) 0%, rgba(58, 35, 35, 0.5) 100%);
+  border-color: rgba(139, 69, 19, 0.4);
+  box-shadow: 0 2px 8px rgba(139, 69, 19, 0.2);
+}
+
+.chapter-icon {
+  font-size: 0.8rem;
+  margin-right: 0.5rem;
+  color: #d4af37;
+  min-width: 1rem;
+}
+
+.chapter-title {
+  font-family: 'Cinzel', serif;
+  font-size: 1rem;
+  font-weight: bold;
+  color: #d4af37;
+  letter-spacing: 1px;
+}
+
+.chapter-header.nested {
+  padding: 0.4rem 0.6rem;
+  margin-left: 1rem;
+}
+
+.chapter-header.nested .chapter-title {
+  font-size: 0.95rem;
+  color: #c9b8a0;
+}
+
+.subchapter-list {
+  list-style: none;
+  padding-left: 1.5rem;
+  margin: 0;
+  margin-top: 0.25rem;
+}
+
+.subchapter-list.nested {
+  padding-left: 1rem;
+}
+
+.nav-link.subchapter {
+  font-size: 0.95rem;
+  padding: 0.4rem 0.75rem;
+  color: #c9b8a0 !important;
+  border-radius: 0.4rem;
+}
+
+.nav-link.subchapter:hover,
+.nav-link.subchapter.router-link-active {
+  background: #3a2323 !important;
+  color: #f5e6c8 !important;
+}
+
+.nested-chapter {
+  margin-top: 0.25rem;
 }
 </style>

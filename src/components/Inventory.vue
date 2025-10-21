@@ -1,10 +1,17 @@
 <script setup>
-import { ref, onMounted, computed, defineEmits } from "vue";
+import { ref, onMounted, computed, defineEmits, defineProps } from "vue";
 import { authFetch } from "../utils/authFetch.js";
 import "../assets/inventory.css";
 import { useBackendMessage } from "../utils/useBackendMessage.js";
 
 //Declarations
+const props = defineProps({
+  items: Array,
+  loading: Boolean,
+  error: String,
+  showButton: Boolean,
+  selectedItem: Object
+});
 const emit = defineEmits(["refreshProfile", "select-item"]);
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const { backendMessage, backendMessageType, showBackendMessage } =
@@ -140,9 +147,13 @@ async function sellItem(itemId) {
 
 <template>
   <div class="inventory-grid">
-    <div v-for="item in gridInventory" class="inventory-item">
+    <div v-for="item in props.items" class="inventory-item" :key="item?.id || Math.random()">
       <template v-if="item">
-        <div class="tooltip-container" @click="$emit('select-item', item)">
+        <div
+          class="tooltip-container"
+          :class="{ 'item-selected': props.selectedItem?.id === item.id }"
+          @click="$emit('select-item', item, $event)"
+        >
           <img
             :src="generateImageName(item.item.name)"
             :alt="item.name"
@@ -151,7 +162,7 @@ async function sellItem(itemId) {
           />
           <div class="custom-tooltip">
             <div class="tt-font-name" :class="`rarity-${item.item.rarity}`">
-              {{ item.item.name }} +{{ item.item.enchant_level }} 
+              {{ item.item.name }} +{{ item.item.enchant_level }}
             </div>
             <div class="tt-font">
               Required Level: {{ item.item.required_level }}
@@ -178,16 +189,6 @@ async function sellItem(itemId) {
               </div>
             </div>
           </div>
-          <button class="inventory-action-btn" @click.stop="equipItem(item.id)">
-            Equip
-          </button>
-          <button
-            class="inventory-action-btn"
-            v-if="showButton"
-            @click.stop="sellItem(item.id)"
-          >
-            Sell
-          </button>
         </div>
       </template>
       <template v-else>
