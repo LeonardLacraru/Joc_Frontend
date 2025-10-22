@@ -181,8 +181,8 @@ async function sellItem(itemId) {
                 {{ statLabels[stat.name] || stat.name }}:
                 <span>
                   {{
-                    ["crit_rate", "hit_rate", "lifesteal"].includes(stat.name)
-                      ? stat.value + "%"
+                    ["crit_rate", "hit_rate", "lifesteal", "crit_dmg"].includes(stat.name)
+                      ? stat.value.toFixed(2) + "%"
                       : stat.value
                   }}
                 </span>

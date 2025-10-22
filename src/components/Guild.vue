@@ -208,7 +208,7 @@ async function handleRequest(requestId, action) {
 
 
 <template>
-  <div class="guild-bg">
+  <div>
     <div v-if="backendMessage" :class="['backend-toast', backendMessageType]">
       {{ backendMessage }}
     </div>
@@ -372,6 +372,7 @@ async function handleRequest(requestId, action) {
 </template>
 
 <style scoped>
+
 
 .navbar-fantasy {
   width: 100%;

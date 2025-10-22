@@ -231,8 +231,8 @@ async function CancelSell(itemId) {
                         <span>
                           {{
                             ["crit_rate", "hit_rate", "lifesteal"].includes(stat.name)
-                              ? stat.value + "%"
-                              : stat.value
+                              ? stat.value.toFixed(2) + "%"
+                              : stat.value.toFixed(2)
                           }}
                         </span>
                       </div>
@@ -277,8 +277,8 @@ async function CancelSell(itemId) {
                         <span>
                           {{
                             ["crit_rate", "hit_rate", "lifesteal"].includes(stat.name)
-                              ? stat.value + "%"
-                              : stat.value
+                              ? stat.value.toFixed(2) + "%"
+                              : stat.value.toFixed(2)
                           }}
                         </span>
                       </div>
@@ -319,8 +319,8 @@ async function CancelSell(itemId) {
                     <span>
                       {{
                         ["crit_rate", "hit_rate", "lifesteal"].includes(stat.name)
-                          ? stat.value + "%"
-                          : stat.value
+                          ? stat.value.toFixed(2) + "%"
+                          : stat.value.toFixed(2)
                       }}
                     </span>
                   </div>

@@ -72,16 +72,12 @@ watch(isLoggedIn, (newVal) => {
   }
 });
 
-// Navbar chapter expansion state
+// Navbar chapter expansion state - all expanded by default
 const expandedChapters = ref({
-  profile: false,
-  activities: false,
-  town: false,
+  profile: true,
+  activities: true,
+  town: true,
 });
-
-function toggleChapter(chapter) {
-  expandedChapters.value[chapter] = !expandedChapters.value[chapter];
-}
 </script>
 
 <template>
@@ -110,11 +106,10 @@ function toggleChapter(chapter) {
 
       <!-- PROFILE Chapter -->
       <li v-if="isLoggedIn" class="nav-chapter">
-        <div class="chapter-header" @click="toggleChapter('profile')">
-          <span class="chapter-icon">{{ expandedChapters.profile ? '▼' : '▶' }}</span>
+        <div class="chapter-header">
           <span class="chapter-title">PROFILE</span>
         </div>
-        <ul v-show="expandedChapters.profile" class="subchapter-list">
+        <ul class="subchapter-list">
           <li>
             <router-link to="/profile" class="nav-link subchapter">
               Character
@@ -130,11 +125,10 @@ function toggleChapter(chapter) {
 
       <!-- TOWN Chapter -->
       <li v-if="isLoggedIn" class="nav-chapter">
-        <div class="chapter-header" @click="toggleChapter('town')">
-          <span class="chapter-icon">{{ expandedChapters.town ? '▼' : '▶' }}</span>
+        <div class="chapter-header">
           <span class="chapter-title">TOWN</span>
         </div>
-        <ul v-show="expandedChapters.town" class="subchapter-list">
+        <ul class="subchapter-list">
           <li>
             <router-link to="/marketplace" class="nav-link subchapter">
               Marketplace
@@ -150,11 +144,10 @@ function toggleChapter(chapter) {
 
       <!-- ACTIVITIES Chapter -->
       <li v-if="isLoggedIn" class="nav-chapter">
-        <div class="chapter-header" @click="toggleChapter('activities')">
-          <span class="chapter-icon">{{ expandedChapters.activities ? '▼' : '▶' }}</span>
+        <div class="chapter-header">
           <span class="chapter-title">ACTIVITIES</span>
         </div>
-        <ul v-show="expandedChapters.activities" class="subchapter-list">
+        <ul class="subchapter-list">
           <li>
             <router-link to="/battle" class="nav-link subchapter">
               Battle
@@ -316,7 +309,6 @@ function toggleChapter(chapter) {
   display: flex;
   align-items: center;
   padding: 0.5rem 0.75rem;
-  cursor: pointer;
   border-radius: 0.4rem;
   transition: all 0.3s ease;
   user-select: none;

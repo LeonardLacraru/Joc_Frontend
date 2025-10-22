@@ -229,9 +229,9 @@ onMounted(async () => {
         <button
           class="btn btn-success btn-mine"
           @click="startMiningActivity"
-          :disabled="!selectedDuration"
+          disabled
         >
-          Start Mining
+          To be added
         </button>
       </div>
 

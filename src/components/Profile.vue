@@ -42,6 +42,16 @@ const statLabels = {
   strength: "Strength",
 };
 
+// Gathering items mapping
+const gatheringItemsMapping = {
+  'bloom': { displayName: 'Moonpetal Bloom', image: 'bloom.png' },
+  'blossoms': { displayName: 'Nightshade Blossoms', image: 'blossoms.png' },
+  'dew': { displayName: 'Dew of the Forgotten Grove', image: 'dew.png' },
+  'fungus': { displayName: 'Ashcap Fungus', image: 'fungus.png' },
+  'mushrooms': { displayName: 'Whispering Mushrooms', image: 'mushrooms.png' },
+  'vines': { displayName: 'Bloodthorn Vines', image: 'vines.png' },
+};
+
 function selectInventoryItem(item, event) {
   if (selectedItem.value?.id === item.id) {
     selectedItem.value = null;
@@ -217,6 +227,11 @@ function formatItemName(itemName) {
     .join(' ');
 }
 
+function getGatheringDisplayName(itemName) {
+  if (!itemName) return '';
+  return gatheringItemsMapping[itemName]?.displayName || formatItemName(itemName);
+}
+
 async function equipItem(itemId) {
   try {
     const response = await authFetch(
@@ -305,6 +320,9 @@ const equippedByType = computed(() => {
 // Clear inventory confirmation
 const showClearConfirm = ref(false);
 const showSecondConfirm = ref(false);
+const isClearing = ref(false);
+const countdown = ref(2000);
+let countdownInterval = null;
 
 function openClearInventory() {
   showClearConfirm.value = true;
@@ -318,9 +336,30 @@ function confirmFirstStep() {
 function cancelClear() {
   showClearConfirm.value = false;
   showSecondConfirm.value = false;
+  isClearing.value = false;
+  countdown.value = 2000;
+  if (countdownInterval) {
+    clearInterval(countdownInterval);
+    countdownInterval = null;
+  }
 }
 
 async function clearInventory() {
+  isClearing.value = true;
+  countdown.value = 2000;
+
+  // Start countdown timer
+  const startTime = Date.now();
+  countdownInterval = setInterval(() => {
+    const elapsed = Date.now() - startTime;
+    countdown.value = Math.max(0, 2000 - elapsed);
+
+    if (countdown.value === 0) {
+      clearInterval(countdownInterval);
+      countdownInterval = null;
+    }
+  }, 10); // Update every 10ms for smooth animation
+
   try {
     const response = await authFetch(`${API_BASE_URL}/clear_inventory/`, {
       method: "DELETE",
@@ -330,14 +369,37 @@ async function clearInventory() {
       showBackendMessage("Inventory cleared successfully!", "success");
       counter.value++;
       await fetchProfile();
+
+      // Wait for countdown to finish
+      setTimeout(() => {
+        showSecondConfirm.value = false;
+        isClearing.value = false;
+        countdown.value = 2000;
+        if (countdownInterval) {
+          clearInterval(countdownInterval);
+          countdownInterval = null;
+        }
+      }, 2000);
     } else {
       const errData = await response.json();
       showBackendMessage(errData.detail || JSON.stringify(errData), "error");
+      showSecondConfirm.value = false;
+      isClearing.value = false;
+      countdown.value = 2000;
+      if (countdownInterval) {
+        clearInterval(countdownInterval);
+        countdownInterval = null;
+      }
     }
   } catch (err) {
     showBackendMessage(err.message, "error");
-  } finally {
     showSecondConfirm.value = false;
+    isClearing.value = false;
+    countdown.value = 2000;
+    if (countdownInterval) {
+      clearInterval(countdownInterval);
+      countdownInterval = null;
+    }
   }
 }
 </script>
@@ -419,7 +481,16 @@ async function clearInventory() {
                   key === 'intelligence' ? int_cost :
                   key === 'hp' ? hp_cost : 0
                 }} 🟡</span>
-                <button class="stat-btn" @click="upgradeStat(key)">+</button>
+                <button
+                  class="stat-btn"
+                  @click="upgradeStat(key)"
+                  :disabled="profile.gold < (
+                    key === 'strength' ? str_cost :
+                    key === 'dexterity' ? dex_cost :
+                    key === 'intelligence' ? int_cost :
+                    key === 'hp' ? hp_cost : 0
+                  )"
+                >+</button>
               </span>
             </div>
           </div>
@@ -515,7 +586,7 @@ async function clearInventory() {
                 />
                 <span class="material-separator">:</span>
                 <span class="material-quantity">{{ quantity }}</span>
-                <div class="material-tooltip">{{ formatItemName(itemName) }}</div>
+                <div class="material-tooltip">{{ getGatheringDisplayName(itemName) }}</div>
               </div>
             </div>
           </div>
@@ -595,10 +666,23 @@ async function clearInventory() {
 
     <div v-if="showSecondConfirm" class="modal-overlay" @click="cancelClear">
       <div class="modal-box" @click.stop>
-        <h3>Final Confirmation</h3>
-        <p class="warning-text">⚠️ This will permanently delete ALL items in your inventory!</p>
-        <p>Are you absolutely sure?</p>
-        <div class="modal-buttons">
+        <h3 v-if="!isClearing">Final Confirmation</h3>
+        <h3 v-else>Clearing Inventory...</h3>
+
+        <p v-if="!isClearing" class="warning-text">⚠️ This will permanently delete ALL items in your inventory!</p>
+        <p v-if="!isClearing">Are you absolutely sure?</p>
+
+        <div v-if="isClearing" class="countdown-display">
+          <div class="countdown-text">Please wait...</div>
+          <div class="countdown-timer">
+            {{ Math.floor(countdown / 1000) }}:{{ String(countdown % 1000).padStart(3, '0').substring(0, 2) }}
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" :style="{ width: `${(countdown / 2000) * 100}%` }"></div>
+          </div>
+        </div>
+
+        <div v-if="!isClearing" class="modal-buttons">
           <button class="btn-cancel" @click="cancelClear">No, Cancel</button>
           <button class="btn-danger" @click="clearInventory">Yes, Clear Everything</button>
         </div>
@@ -824,10 +908,18 @@ async function clearInventory() {
   transition: all 0.2s ease;
 }
 
-.stat-btn:hover {
+.stat-btn:hover:not(:disabled) {
   background: #ffe600;
   color: #333;
   transform: scale(1.1);
+}
+
+.stat-btn:disabled {
+  background: #222;
+  color: #666;
+  border-color: #444;
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 /* Experience Section */
@@ -899,6 +991,13 @@ async function clearInventory() {
 /* Inventory Section */
 .inventory-section {
   min-width: 0;
+  background-image: url('@/assets/inv_background.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 2px solid #6a0f19;
 }
 
 /* Materials Panels */
@@ -958,6 +1057,7 @@ async function clearInventory() {
 .material-item {
   position: relative;
   display: flex;
+  flex-direction: row;
   align-items: center;
   gap: 0.4rem;
   background: linear-gradient(180deg, rgba(34, 23, 27, 0.5) 70%, rgba(24, 16, 18, 0.5) 100%);
@@ -965,6 +1065,8 @@ async function clearInventory() {
   border-radius: 6px;
   padding: 0.3rem 0.5rem;
   transition: all 0.3s ease;
+  flex-wrap: nowrap;
+  white-space: nowrap;
 }
 
 .material-item:hover {
@@ -1001,6 +1103,7 @@ async function clearInventory() {
   width: 32px;
   height: 32px;
   object-fit: contain;
+  flex-shrink: 0;
 }
 
 .material-separator {
@@ -1181,6 +1284,43 @@ async function clearInventory() {
 .btn-danger:hover {
   background: linear-gradient(135deg, #e33f3f 0%, #b53232 100%);
   transform: translateY(-2px);
+}
+
+/* Countdown Display */
+.countdown-display {
+  text-align: center;
+  padding: 2rem 1rem;
+}
+
+.countdown-text {
+  font-size: 1.1rem;
+  color: #e0cfa9;
+  margin-bottom: 1rem;
+}
+
+.countdown-timer {
+  font-size: 3rem;
+  font-weight: bold;
+  color: #d4af37;
+  font-family: 'Courier New', monospace;
+  text-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
+  margin-bottom: 1.5rem;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background: #22171b;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid #6a0f19;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #d4af37 0%, #b8941f 100%);
+  transition: width 0.1s linear;
+  box-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
 }
 
 /* Responsive Design */
