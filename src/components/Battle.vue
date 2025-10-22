@@ -533,23 +533,23 @@ onMounted(async () => {
                     </div>
                   </template>
                   <template v-if="dungeonBattleData.enchant_reward">
-                  <div class ="tooltip-container reward-item">
-                  <img
-                    :src="generateStoneName(dungeonBattleData.enchant_reward.name)"
-                    :alt="dungeonBattleData.enchant_reward.name"
-                    class="item-icon"
-                    @error="handleImageError"
-                  />
-                  <div class="custom-tooltip">
-                    <div class="tt-font-name rarity-unique">
-                      {{ dungeonBattleData.enchant_reward.display_name }}
+                    <div class="tooltip-container reward-item">
+                      <img
+                        :src="generateStoneName(dungeonBattleData.enchant_reward.name)"
+                        :alt="dungeonBattleData.enchant_reward.name"
+                        class="item-icon"
+                        @error="handleImageError"
+                      />
+                      <div class="custom-tooltip">
+                        <div class="tt-font-name rarity-unique">
+                          {{ dungeonBattleData.enchant_reward.display_name }}
+                        </div>
+                        <div class="tt-stat">
+                          {{ dungeonBattleData.enchant_reward.description }}
+                        </div>
+                      </div>
                     </div>
-                    <div class="tt-stat">
-                       {{ dungeonBattleData.enchant_reward.description }}
-                    </div>
-                  </div>
-                  </div>
-                </template>
+                  </template>
                 </div>
               </div>
             </div>
@@ -806,23 +806,28 @@ onMounted(async () => {
   margin-left: 0.5rem;
   margin-right: 0.5rem;
   position: relative;
-}
-
-.item-icon {
   width: 100px;
   height: 100px;
+}
+
+.reward-item .item-icon {
+  width: 100%;
+  height: 100%;
   border-radius: 6px;
   border: 1.5px solid #ffe600;
   background: #22171b;
   box-shadow: 0 1px 6px #181012;
+  display: block;
 }
 
-.tooltip-container {
+.tooltip-container.reward-item {
   position: relative;
   display: inline-block;
+  width: 100px;
+  height: 100px;
 }
 
-.custom-tooltip {
+.tooltip-container.reward-item .custom-tooltip {
   display: none;
   position: absolute;
   z-index: 1000;
@@ -840,7 +845,7 @@ onMounted(async () => {
   white-space: pre-line;
 }
 
-.tooltip-container:hover .custom-tooltip {
+.tooltip-container.reward-item:hover .custom-tooltip {
   display: block;
 }
 

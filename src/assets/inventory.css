@@ -210,29 +210,39 @@
 .inventory-item {
   background: linear-gradient(180deg, #22171b 70%, #181012 100%);
   border-radius: 0.75rem;
-  border: 1.5px solid #2d161a;
+  border: 2px solid #2d161a;
   color: #e7d7b1;
   box-shadow: 0 2px 8px rgba(40, 10, 20, 0.3);
   font-family: 'Cinzel', serif;
   font-size: 1.05rem;
   transition: box-shadow 0.2s, border-color 0.2s;
+  width: 90px;
+  height: 90px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  overflow: visible;
+  box-sizing: border-box;
+  position: relative;
+  z-index: 1;
 }
 
 .inventory-item:hover {
   box-shadow: 0 0 0.625rem #6a0f19;
   border-color: #e7d7b1;
+  z-index: 100;
 }
 
 .item-icon {
-  width: 5vw;
-  height: 4vw;
-  max-width: 90px;
-  max-height: 90px;
-  min-width: 50px;
-  min-height: 50px;
-  margin-bottom: 0.5rem;
-  border-radius: 0.4rem;
-  box-shadow: 0 1px 6px #2d161a;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 0.55rem;
+  margin: 0;
+  padding: 0;
+  display: block;
+  overflow: hidden;
 }
 
 .stat-points-container {
@@ -290,9 +300,11 @@
 .tooltip-container {
   position: relative;
   display: flex;
-  flex-direction: column;
   align-items: center;
+  justify-content: center;
   cursor: pointer;
+  width: 100%;
+  height: 100%;
 }
 
 .item-selected {
@@ -304,20 +316,25 @@
 .custom-tooltip {
   display: none;
   position: absolute;
-  z-index: 1000;
+  z-index: 99999;
   left: 100%;
   top: 50%;
   transform: translateY(-50%);
   margin-left: 10px;
-  background: #22171b;
+  background: #0d0508;
   color: #e7d7b1;
-  border: 1px solid #6a0f19;
-  box-shadow: 0 2px 8px rgba(120, 10, 30, 0.3);
+  border: 3px solid #6a0f19;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 1), 0 0 0 2px rgba(106, 15, 25, 0.8);
   font-family: 'Cinzel', serif;
-  padding: 0.75rem 1rem;
-  min-width: 180px;
+  padding: 0.6rem 0.8rem;
+  min-width: 160px;
+  max-width: 240px;
+  border-radius: 6px;
   pointer-events: none;
-  white-space: pre-line;
+  white-space: normal;
+  word-wrap: break-word;
+  line-height: 1.4;
+  opacity: 1;
 }
 
 .custom-tooltip-equipped {
@@ -363,6 +380,16 @@
   margin-bottom: 0.25rem;
 }
 
+.tt-stats {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.tt-stat {
+  margin-bottom: 0.2rem;
+  color: #b3e5fc;
+}
+
 .rarity-common {
   color: #fff;
 }
@@ -381,6 +408,77 @@
 
 .rarity-legendary {
   color: #ff9800;
+}
+
+/* Rarity border colors for inventory items */
+.inventory-item.rarity-border-common {
+  border-color: #fff;
+}
+
+.inventory-item.rarity-border-uncommon {
+  border-color: #4caf50;
+  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+}
+
+.inventory-item.rarity-border-uncommon:hover {
+  box-shadow: 0 0 0.625rem #4caf50;
+}
+
+.inventory-item.rarity-border-rare {
+  border-color: #2196f3;
+  box-shadow: 0 2px 8px rgba(33, 150, 243, 0.3);
+}
+
+.inventory-item.rarity-border-rare:hover {
+  box-shadow: 0 0 0.625rem #2196f3;
+}
+
+.inventory-item.rarity-border-epic {
+  border-color: #9c27b0;
+  box-shadow: 0 2px 8px rgba(156, 39, 176, 0.3);
+}
+
+.inventory-item.rarity-border-epic:hover {
+  box-shadow: 0 0 0.625rem #9c27b0;
+}
+
+.inventory-item.rarity-border-legendary {
+  border-color: #ff9800;
+  box-shadow: 0 2px 8px rgba(255, 152, 0, 0.3);
+}
+
+.inventory-item.rarity-border-legendary:hover {
+  box-shadow: 0 0 0.875rem #ff9800;
+}
+
+/* Rarity border colors for equipped item slots */
+.placeholder-slot.rarity-border-common,
+.placeholder-slot-bigger-slot.rarity-border-common {
+  border-color: #fff;
+}
+
+.placeholder-slot.rarity-border-uncommon,
+.placeholder-slot-bigger-slot.rarity-border-uncommon {
+  border-color: #4caf50;
+  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+}
+
+.placeholder-slot.rarity-border-rare,
+.placeholder-slot-bigger-slot.rarity-border-rare {
+  border-color: #2196f3;
+  box-shadow: 0 2px 8px rgba(33, 150, 243, 0.3);
+}
+
+.placeholder-slot.rarity-border-epic,
+.placeholder-slot-bigger-slot.rarity-border-epic {
+  border-color: #9c27b0;
+  box-shadow: 0 2px 8px rgba(156, 39, 176, 0.3);
+}
+
+.placeholder-slot.rarity-border-legendary,
+.placeholder-slot-bigger-slot.rarity-border-legendary {
+  border-color: #ff9800;
+  box-shadow: 0 2px 8px rgba(255, 152, 0, 0.3);
 }
 
 .tt-stats {

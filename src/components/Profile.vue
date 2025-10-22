@@ -426,7 +426,10 @@ async function clearInventory() {
             <template v-if="equippedByType[slot.type]">
               <div
                 class="item-wrapper"
-                :class="{ 'item-selected': selectedEquippedItem?.id === equippedByType[slot.type].id }"
+                :class="[
+                  { 'item-selected': selectedEquippedItem?.id === equippedByType[slot.type].id },
+                  `rarity-border-${equippedByType[slot.type].item.rarity}`
+                ]"
                 @click="selectEquippedItem(equippedByType[slot.type], $event)"
               >
                 <img
@@ -749,6 +752,12 @@ async function clearInventory() {
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+  z-index: 1;
+}
+
+.equipment-slot:hover {
+  z-index: 100;
 }
 
 .item-wrapper {
@@ -760,6 +769,17 @@ async function clearInventory() {
   display: flex;
   align-items: center;
   justify-content: center;
+  border: 2.5px solid transparent;
+  border-radius: 8px;
+  overflow: visible;
+  background: linear-gradient(180deg, #22171b 70%, #181012 100%);
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.item-wrapper .item-img {
+  border-radius: 5px;
+  overflow: hidden;
 }
 
 .item-wrapper:hover {
@@ -769,14 +789,43 @@ async function clearInventory() {
 .item-wrapper.item-selected {
   outline: 3px solid #d4af37;
   outline-offset: 2px;
-  border-radius: 4px;
+  border-radius: 8px;
+}
+
+/* Rarity border colors for equipped items */
+.item-wrapper.rarity-border-common {
+  border-color: #fff;
+  box-shadow: 0 2px 8px rgba(255, 255, 255, 0.2);
+}
+
+.item-wrapper.rarity-border-uncommon {
+  border-color: #4caf50;
+  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.4);
+}
+
+.item-wrapper.rarity-border-rare {
+  border-color: #2196f3;
+  box-shadow: 0 2px 8px rgba(33, 150, 243, 0.4);
+}
+
+.item-wrapper.rarity-border-epic {
+  border-color: #9c27b0;
+  box-shadow: 0 2px 8px rgba(156, 39, 176, 0.4);
+}
+
+.item-wrapper.rarity-border-legendary {
+  border-color: #ff9800;
+  box-shadow: 0 2px 10px rgba(255, 152, 0, 0.5);
 }
 
 .item-img {
   width: 100%;
   height: 100%;
-  object-fit: contain;
-  border-radius: 4px;
+  object-fit: cover;
+  border-radius: 5px;
+  display: block;
+  margin: 0;
+  padding: 0;
 }
 
 .empty-slot {
@@ -788,18 +837,24 @@ async function clearInventory() {
 .item-tooltip {
   display: none;
   position: absolute;
-  z-index: 1000;
-  left: 50%;
-  top: -10px;
-  transform: translate(-50%, -100%);
-  background: #22171b;
+  z-index: 99999;
+  left: 100%;
+  top: 50%;
+  margin-left: 10px;
+  transform: translateY(-50%);
+  background: #0d0508;
   color: #e7d7b1;
-  border: 1px solid #6a0f19;
-  box-shadow: 0 2px 8px rgba(120, 10, 30, 0.3);
-  padding: 0.75rem 1rem;
-  min-width: 180px;
-  border-radius: 4px;
+  border: 3px solid #6a0f19;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 1), 0 0 0 2px rgba(106, 15, 25, 0.8);
+  padding: 0.6rem 0.8rem;
+  min-width: 160px;
+  max-width: 240px;
+  border-radius: 6px;
   pointer-events: none;
+  white-space: normal;
+  word-wrap: break-word;
+  line-height: 1.4;
+  opacity: 1;
 }
 
 .item-wrapper:hover .item-tooltip {
@@ -808,25 +863,32 @@ async function clearInventory() {
 
 .tooltip-equipped {
   font-weight: bold;
-  font-size: 0.85rem;
-  margin-bottom: 0.25rem;
+  font-size: 0.8rem;
+  margin-bottom: 0.3rem;
+  color: #4caf50;
 }
 
 .tooltip-name {
   font-weight: bold;
-  font-size: 1rem;
-  margin-bottom: 0.25rem;
+  font-size: 0.95rem;
+  margin-bottom: 0.3rem;
 }
 
 .tooltip-info {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   margin-bottom: 0.25rem;
+  color: #e7d7b1;
 }
 
 .tooltip-stats {
-  margin-top: 0.5rem;
-  font-size: 0.85rem;
+  margin-top: 0.4rem;
+  font-size: 0.8rem;
+  color: #e7d7b1;
+}
+
+.tooltip-stats > div {
   color: #b3e5fc;
+  margin-bottom: 0.15rem;
 }
 
 /* Rarity Colors */
@@ -1052,21 +1114,24 @@ async function clearInventory() {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+  align-items: center;
 }
 
 .material-item {
   position: relative;
-  display: flex;
+  display: inline-flex;
   flex-direction: row;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.5rem;
   background: linear-gradient(180deg, rgba(34, 23, 27, 0.5) 70%, rgba(24, 16, 18, 0.5) 100%);
   border: 1.5px solid #2d161a;
   border-radius: 6px;
-  padding: 0.3rem 0.5rem;
+  padding: 0.4rem 0.6rem;
   transition: all 0.3s ease;
-  flex-wrap: nowrap;
+  flex-shrink: 0;
   white-space: nowrap;
+  width: auto;
+  max-width: fit-content;
 }
 
 .material-item:hover {
@@ -1100,24 +1165,24 @@ async function clearInventory() {
 }
 
 .material-icon {
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
   object-fit: contain;
   flex-shrink: 0;
 }
 
 .material-separator {
   color: #6a4a3a;
-  font-size: 1rem;
+  font-size: 1.1rem;
   font-weight: bold;
 }
 
 .material-quantity {
-  font-size: 0.95rem;
+  font-size: 1.1rem;
   font-weight: bold;
   color: #ffe600;
   text-shadow: 0 1px 4px #000;
-  min-width: 20px;
+  min-width: 24px;
 }
 
 /* Floating Action Panel */

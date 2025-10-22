@@ -147,7 +147,10 @@ async function sellItem(itemId) {
 
 <template>
   <div class="inventory-grid">
-    <div v-for="item in props.items" class="inventory-item" :key="item?.id || Math.random()">
+    <div v-for="item in props.items"
+         class="inventory-item"
+         :class="item ? `rarity-border-${item.item.rarity}` : ''"
+         :key="item?.id || Math.random()">
       <template v-if="item">
         <div
           class="tooltip-container"
@@ -183,7 +186,7 @@ async function sellItem(itemId) {
                   {{
                     ["crit_rate", "hit_rate", "lifesteal", "crit_dmg"].includes(stat.name)
                       ? stat.value.toFixed(2) + "%"
-                      : stat.value
+                      : stat.value.toFixed(2)
                   }}
                 </span>
               </div>

@@ -202,17 +202,19 @@ async function CancelSell(itemId) {
 </script>
 
 <template>
-  <div class="screen-80">
+  <div>
     <div v-if="backendMessage" :class="['backend-toast', backendMessageType]">
       {{ backendMessage }}
     </div>
-    <div class="mainInventory">
+    <div>
       <div class="top-section">
         <div class="left-panelMarket">
           <h2 class="tt-stats">Inventory</h2>
           <div class="tt-stats">Gold: {{ profile.gold }}🟡</div>
           <div class="inventory-grid">
-            <div v-for="item in gridInventory" class="inventory-item">
+            <div v-for="item in gridInventory"
+                 class="inventory-item"
+                 :class="item ? `rarity-border-${item.item.rarity}` : ''">
               <template v-if="item">
                 <div class="tooltip-container">
                   <img :src="generateImageName(item.item.name, item.item.rarity)" :alt="item.name" class="item-icon"
@@ -258,7 +260,9 @@ async function CancelSell(itemId) {
         <div class="right-panel">
           <h2 class="tt-stats">Listed Items</h2>
           <div class="inventory-grid">
-            <div v-for="item in listed_items" class="inventory-item">
+            <div v-for="item in listed_items"
+                 class="inventory-item"
+                 :class="item ? `rarity-border-${item.item.item.rarity}` : ''">
               <template v-if="item">
                 <div class="tooltip-container">
                   <img :src="generateImageName(item.item.item.name, item.item.item.rarity)" :alt="item.name"
@@ -299,7 +303,9 @@ async function CancelSell(itemId) {
       </div>
       <h2 class="tt-stats">Marketplace</h2>
       <div class="inventory-grid">
-        <div v-for="item in marketplace" class="inventory-item">
+        <div v-for="item in marketplace"
+             class="inventory-item"
+             :class="item ? `rarity-border-${item.item.item.rarity}` : ''">
           <template v-if="item">
             <div class="tooltip-container">
               <img :src="generateImageName(item.item.item.name, item.item.item.rarity)" :alt="item.name" class="item-icon"
