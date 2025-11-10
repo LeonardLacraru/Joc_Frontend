@@ -5,8 +5,7 @@ import { useBackendMessage } from "../utils/useBackendMessage.js";
 
 const { backendMessage, backendMessageType, showBackendMessage } = useBackendMessage();
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
-const API_BASE_WS =
-  import.meta.env.VITE_API_BASE_URL_WSS || "wss://ourgame.onrender.com/ws";
+const API_BASE_WS = import.meta.env.VITE_API_BASE_URL_WSS;
 
 /*
   Module scoped manager so state and websockets survive component unmount/remount
@@ -14,6 +13,7 @@ const API_BASE_WS =
 const wsManager = {
   ws: null,
   timer: { active: false, minutes: 0, seconds: 0 },
+  isProcessingCompletion: false,
 };
 
 // load persisted timer if any
@@ -75,20 +75,6 @@ const gatheringResult = ref(loadGatheringResult());
 // Track if the result card is minimized
 const isResultMinimized = ref(false);
 
-// Save gathering result to localStorage whenever it changes
-const saveGatheringResult = (result) => {
-  gatheringResult.value = result;
-  try {
-    if (result) {
-      localStorage.setItem("gathering_last_reward", JSON.stringify(result));
-    } else {
-      localStorage.removeItem("gathering_last_reward");
-    }
-  } catch (e) {
-    console.error("Error saving gathering result:", e);
-  }
-};
-
 // Get image path for gathering item
 const getGatheringImage = (itemName) => {
   if (!itemName) return null;
@@ -142,38 +128,36 @@ const closeWebsocket = () => {
   } catch (e) {}
 };
 
-// Fetch gathering result
+// Fetch gathering result on mount
 const getGatheringTask = async () => {
   try {
     const resp = await authFetch(
-      `${API_BASE_URL}/town/lifeskill/get_gathering_task/`
+      `${API_BASE_URL}/town/gathering/get_gathering_task/`
     );
+    if (!resp) {
+      return;
+    }
+
+    // If 404, there's no active task - this is normal
+    if (resp.status === 404) {
+      return;
+    }
+
     const data = await resp.json().catch(() => null);
-    if (resp.ok) {
-      if (data && data.message) {
-        showBackendMessage(data.message, "success");
-      } else if (data && (data.item || data.description || data.gold != null)) {
-        // Store the result to display on page
-        saveGatheringResult({
-          item: data.item ? String(data.item) : "",
-          description: data.description ? String(data.description) : "",
-          gold: data.gold != null ? Number(data.gold) : 0,
-        });
-        // Expand the card to show the new reward
-        isResultMinimized.value = false;
-        //showBackendMessage("Gathering result fetched!", "success");
-      } else {
-        showBackendMessage("No gathering result", "info");
-      }
-    } else {
-      showBackendMessage(
-        (data && (data.message || data.detail)) || "Failed to fetch gathering result",
-        "error"
-      );
+    if (resp.ok && data && (data.item || data.description || data.gold != null)) {
+      // Store in localStorage
+      const result = {
+        item: data.item ? String(data.item) : "",
+        description: data.description ? String(data.description) : "",
+        gold: data.gold != null ? Number(data.gold) : 0,
+      };
+      localStorage.setItem("gathering_last_reward", JSON.stringify(result));
+      // Update reactive ref
+      gatheringResult.value = result;
+      isResultMinimized.value = false;
     }
   } catch (err) {
     console.error("Error fetching gathering result:", err);
-    showBackendMessage("Failed to fetch gathering result", "error");
   }
 };
 
@@ -195,6 +179,14 @@ const openTimerWebsocket = (token) => {
     w.onmessage = async (ev) => {
       try {
         const payload = JSON.parse(ev.data);
+
+        // Check if this message is for gathering task
+        const taskType = payload.task_type ?? payload["task_type"];
+        if (taskType && taskType !== "gathering") {
+          // Ignore messages that are not for gathering
+          return;
+        }
+
         const mins =
           payload["remaining minutes"] ??
           payload["remaining_minutes"] ??
@@ -209,6 +201,18 @@ const openTimerWebsocket = (token) => {
 
         // if finished, call backend endpoint
         if ((Number(mins) || 0) === 0 && (Number(secs) || 0) === 0) {
+          // Check if already processing to prevent multiple calls
+          if (wsManager.isProcessingCompletion) {
+            return;
+          }
+
+          // Check if timer was active (to avoid processing if already completed)
+          if (!timer.active) {
+            return;
+          }
+
+          wsManager.isProcessingCompletion = true;
+
           // clean up websocket and timer first
           try { closeWebsocket(); } catch (e) {}
           try { clearTimerState(); } catch (e) {}
@@ -218,32 +222,34 @@ const openTimerWebsocket = (token) => {
 
           try {
             const resp = await authFetch(
-              `${API_BASE_URL}/town/lifeskill/get_gathering_task/`
+              `${API_BASE_URL}/town/gathering/get_gathering_task/`
             );
+            if (!resp) {
+              wsManager.isProcessingCompletion = false;
+              return;
+            }
+
             const data = await resp.json().catch(() => null);
 
-            if (resp.ok) {
-              if (data && data.message) {
-                showBackendMessage(data.message, "success");
-              } else if (data && (data.item || data.description || data.gold != null)) {
-                // Store the result to display on page
-                saveGatheringResult({
-                  item: data.item ? String(data.item) : "",
-                  description: data.description ? String(data.description) : "",
-                  gold: data.gold != null ? Number(data.gold) : 0,
-                });
-                // Expand the card to show the new reward
-                isResultMinimized.value = false;
-                showBackendMessage("Gathering task completed!", "success");
-              }
-            } else {
-              showBackendMessage(
-                (data && (data.message || data.detail)) || "Failed to fetch gathering result",
-                "error"
-              );
+            if (resp.ok && data) {
+              // Store in localStorage
+              localStorage.setItem("gathering_last_reward", JSON.stringify({
+                item: data.item ? String(data.item) : "",
+                description: data.description ? String(data.description) : "",
+                gold: data.gold != null ? Number(data.gold) : 0,
+              }));
+
+              showBackendMessage("Gathering task completed!", "success");
+
+              // Reload page after 1 second
+              setTimeout(() => {
+                window.location.reload();
+              }, 1000);
             }
           } catch (err) {
-            showBackendMessage("Failed to fetch gathering result", "error");
+            console.error("Failed to fetch gathering result:", err);
+          } finally {
+            wsManager.isProcessingCompletion = false;
           }
         }
       } catch (err) {
@@ -269,7 +275,7 @@ const startGatheringActivity = async () => {
   }
   try {
     const response = await authFetch(
-      `${API_BASE_URL}/town/lifeskill/start_gathering_task/`,
+      `${API_BASE_URL}/town/gathering/start_gathering_task/`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },

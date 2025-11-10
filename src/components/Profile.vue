@@ -52,6 +52,15 @@ const gatheringItemsMapping = {
   'vines': { displayName: 'Bloodthorn Vines', image: 'vines.png' },
 };
 
+// Mining items mapping
+const miningItemsMapping = {
+  'bronze': { displayName: 'Bronze Ore', image: 'bronze.png' },
+  'silver': { displayName: 'Silver Ore', image: 'silver.png' },
+  'gold': { displayName: 'Gold Ore', image: 'gold.png' },
+  'platinum': { displayName: 'Platinum Ore', image: 'platinum.png' },
+  'emerald': { displayName: 'Emerald Gem', image: 'emerald.png' },
+};
+
 function selectInventoryItem(item, event) {
   if (selectedItem.value?.id === item.id) {
     selectedItem.value = null;
@@ -117,7 +126,11 @@ onUnmounted(() => {
 async function fetchProfile() {
   try {
     const response = await authFetch(`${API_BASE_URL}/profile/`);
-    if (response && response.ok) {
+    if (!response) {
+      // Token refresh failed, user is being redirected to login
+      return null;
+    }
+    if (response.ok) {
       const data = await response.json();
       profile.value = data || 0;
       inventory.value = data.inventory_items || 0;
@@ -125,6 +138,7 @@ async function fetchProfile() {
       current_hp.value = data.stats.current_hp || 0;
       enchantItems.value = data.inventory_enchant_items || {};
       gatheringItems.value = data.inventory_gathering_items || {};
+      miningItems.value = data.inventory_mining_items || {};
       loading.value = false;
       await getStatsCost();
       return null;
@@ -147,6 +161,9 @@ async function upgradeStat(stat_name) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ stat_name }),
     });
+    if (!response) {
+      return null;
+    }
     if (response.ok) {
       await fetchProfile();
       showBackendMessage("Stat upgraded!", "success");
@@ -164,6 +181,9 @@ async function upgradeStat(stat_name) {
 async function getStatsCost() {
   try {
     const response = await authFetch(`${API_BASE_URL}/update_stats/`);
+    if (!response) {
+      return null;
+    }
     if (response.ok) {
       const data = await response.json();
       str_cost.value = data.str_cost || 0;
@@ -205,12 +225,22 @@ function generateEnchantImageName(itemName) {
   return new URL(`../assets/stones/${fileName}`, import.meta.url).href;
 }
 
+function generateMiningImageName(itemName) {
+  if (!itemName) return new URL("../assets/mining/default.png", import.meta.url).href;
+  const fileName = itemName.toLowerCase() + ".png";
+  return new URL(`../assets/mining/${fileName}`, import.meta.url).href;
+}
+
 function handleGatheringImageError(event) {
   event.target.src = new URL("../assets/gathering/default.png", import.meta.url).href;
 }
 
 function handleEnchantImageError(event) {
   event.target.src = new URL("../assets/stones/default.png", import.meta.url).href;
+}
+
+function handleMiningImageError(event) {
+  event.target.src = new URL("../assets/mining/default.png", import.meta.url).href;
 }
 
 function capitalize(str) {
@@ -232,6 +262,11 @@ function getGatheringDisplayName(itemName) {
   return gatheringItemsMapping[itemName]?.displayName || formatItemName(itemName);
 }
 
+function getMiningDisplayName(itemName) {
+  if (!itemName) return '';
+  return miningItemsMapping[itemName]?.displayName || formatItemName(itemName);
+}
+
 async function equipItem(itemId) {
   try {
     const response = await authFetch(
@@ -241,6 +276,9 @@ async function equipItem(itemId) {
         headers: { "Content-Type": "application/json" },
       }
     );
+    if (!response) {
+      return null;
+    }
     if (response.ok) {
       showBackendMessage("Item equipped!", "success");
       selectedItem.value = null;
@@ -263,6 +301,9 @@ async function sellItem(itemId) {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
     });
+    if (!response) {
+      return null;
+    }
     if (response.ok) {
       counter.value++;
       showButton.value = false;
@@ -365,6 +406,16 @@ async function clearInventory() {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
     });
+    if (!response) {
+      showSecondConfirm.value = false;
+      isClearing.value = false;
+      countdown.value = 2000;
+      if (countdownInterval) {
+        clearInterval(countdownInterval);
+        countdownInterval = null;
+      }
+      return;
+    }
     if (response.ok) {
       showBackendMessage("Inventory cleared successfully!", "success");
       counter.value++;
@@ -586,7 +637,7 @@ async function clearInventory() {
                   :alt="itemName"
                   class="material-icon"
                   @error="handleGatheringImageError"
-                />
+                /> 
                 <span class="material-separator">:</span>
                 <span class="material-quantity">{{ quantity }}</span>
                 <div class="material-tooltip">{{ getGatheringDisplayName(itemName) }}</div>
@@ -624,14 +675,14 @@ async function clearInventory() {
                 class="material-item tooltip-container"
               >
                 <img
-                  :src="generateGatheringImageName(itemName)"
+                  :src="generateMiningImageName(itemName)"
                   :alt="itemName"
                   class="material-icon"
-                  @error="handleGatheringImageError"
+                  @error="handleMiningImageError"
                 />
                 <span class="material-separator">:</span>
                 <span class="material-quantity">{{ quantity }}</span>
-                <div class="material-tooltip">{{ formatItemName(itemName) }}</div>
+                <div class="material-tooltip">{{ getMiningDisplayName(itemName) }}</div>
               </div>
             </div>
           </div>
@@ -1069,6 +1120,10 @@ async function clearInventory() {
   border: 2px solid #6a0f19;
   border-radius: 8px;
   padding: 0.75rem;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: visible;
 }
 
 /* Tabs Header */
@@ -1107,19 +1162,21 @@ async function clearInventory() {
 
 /* Tab Content */
 .tab-content {
-  min-height: 80px;
+  min-height: 150px;
+  height: 150px;
+  overflow: visible;
 }
 
 .materials-list {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
   gap: 0.5rem;
-  align-items: center;
+  align-items: start;
 }
 
 .material-item {
   position: relative;
-  display: inline-flex;
+  display: flex;
   flex-direction: row;
   align-items: center;
   gap: 0.5rem;
@@ -1128,16 +1185,15 @@ async function clearInventory() {
   border-radius: 6px;
   padding: 0.4rem 0.6rem;
   transition: all 0.3s ease;
-  flex-shrink: 0;
   white-space: nowrap;
-  width: auto;
-  max-width: fit-content;
+  justify-content: center;
 }
 
 .material-item:hover {
   border-color: #d4af37;
   box-shadow: 0 0 8px rgba(212, 175, 55, 0.3);
   transform: translateY(-2px);
+  z-index: 1000;
 }
 
 .material-tooltip {
@@ -1146,18 +1202,18 @@ async function clearInventory() {
   bottom: 100%;
   left: 50%;
   transform: translateX(-50%);
-  background: #22171b;
+  background: #0d0508;
   color: #e7d7b1;
-  border: 1px solid #6a0f19;
-  box-shadow: 0 2px 8px rgba(120, 10, 30, 0.3);
+  border: 2px solid #6a0f19;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.8);
   font-family: 'Cinzel', serif;
-  padding: 0.4rem 0.6rem;
-  border-radius: 4px;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
   white-space: nowrap;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   pointer-events: none;
-  margin-bottom: 0.25rem;
-  z-index: 1000;
+  margin-bottom: 0.5rem;
+  z-index: 1001;
 }
 
 .material-item:hover .material-tooltip {

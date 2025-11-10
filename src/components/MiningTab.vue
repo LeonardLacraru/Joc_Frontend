@@ -5,8 +5,7 @@ import { useBackendMessage } from "../utils/useBackendMessage.js";
 
 const { backendMessage, backendMessageType, showBackendMessage } = useBackendMessage();
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
-const API_BASE_WS =
-  import.meta.env.VITE_API_BASE_URL_WSS || "wss://ourgame.onrender.com/ws";
+const API_BASE_WS = import.meta.env.VITE_API_BASE_URL_WSS;
 
 /*
   Module scoped manager so state and websockets survive component unmount/remount
@@ -14,6 +13,7 @@ const API_BASE_WS =
 const wsManager = {
   ws: null,
   timer: { active: false, minutes: 0, seconds: 0 },
+  isProcessingCompletion: false,
 };
 
 // load persisted timer if any
@@ -47,6 +47,54 @@ const durations = [
 // reactive wrapper around manager timer so template updates
 const timer = reactive(wsManager.timer);
 
+// Item data mapping
+const miningItems = {
+  'bronze': { displayName: 'Bronze Ore', image: 'bronze.png' },
+  'silver': { displayName: 'Silver Ore', image: 'silver.png' },
+  'gold': { displayName: 'Gold Ore', image: 'gold.png' },
+  'platinum': { displayName: 'Platinum Ore', image: 'platinum.png' },
+  'emerald': { displayName: 'Emerald Gem', image: 'emerald.png' },
+};
+
+// Store task completion results (load from localStorage if available)
+const loadMiningResult = () => {
+  try {
+    const saved = localStorage.getItem("mining_last_reward");
+    if (saved) {
+      return JSON.parse(saved);
+    }
+  } catch (e) {
+    console.error("Error loading mining result:", e);
+  }
+  return null;
+};
+
+const miningResult = ref(loadMiningResult());
+
+// Track if the result card is minimized
+const isResultMinimized = ref(false);
+
+// Get image path for mining item
+const getMiningImage = (itemName) => {
+  if (!itemName) return null;
+  try {
+    const itemData = miningItems[itemName.toLowerCase()];
+    if (itemData && itemData.image) {
+      return new URL(`../assets/mining/${itemData.image}`, import.meta.url).href;
+    }
+  } catch (e) {
+    console.error("Error loading image:", e);
+  }
+  return null;
+};
+
+// Get display name for mining item
+const getDisplayName = (itemName) => {
+  if (!itemName) return '';
+  const itemData = miningItems[itemName.toLowerCase()];
+  return itemData ? itemData.displayName : itemName;
+};
+
 // helper to get token
 const getAuthToken = () => {
   return (
@@ -79,6 +127,39 @@ const closeWebsocket = () => {
   } catch (e) {}
 };
 
+// Fetch mining result on mount
+const getMiningTask = async () => {
+  try {
+    const resp = await authFetch(
+      `${API_BASE_URL}/town/mining/get_mining_task/`
+    );
+    if (!resp) {
+      return;
+    }
+
+    // If 404, there's no active task - this is normal
+    if (resp.status === 404) {
+      return;
+    }
+
+    const data = await resp.json().catch(() => null);
+    if (resp.ok && data && (data.item || data.description || data.gold != null)) {
+      // Store in localStorage
+      const result = {
+        item: data.item ? String(data.item) : "",
+        description: data.description ? String(data.description) : "",
+        gold: data.gold != null ? Number(data.gold) : 0,
+      };
+      localStorage.setItem("mining_last_reward", JSON.stringify(result));
+      // Update reactive ref
+      miningResult.value = result;
+      isResultMinimized.value = false;
+    }
+  } catch (err) {
+    console.error("Error fetching mining result:", err);
+  }
+};
+
 // open websocket for mining
 const openTimerWebsocket = (token) => {
   if (!token) return;
@@ -97,6 +178,14 @@ const openTimerWebsocket = (token) => {
     w.onmessage = async (ev) => {
       try {
         const payload = JSON.parse(ev.data);
+
+        // Check if this message is for mining task
+        const taskType = payload.task_type ?? payload["task_type"];
+        if (taskType && taskType !== "mining") {
+          // Ignore messages that are not for mining
+          return;
+        }
+
         const mins =
           payload["remaining minutes"] ??
           payload["remaining_minutes"] ??
@@ -109,14 +198,58 @@ const openTimerWebsocket = (token) => {
           0;
         setTimerState(mins, secs);
 
-        // if finished, handle completion (to be implemented)
+        // if finished, call backend endpoint
         if ((Number(mins) || 0) === 0 && (Number(secs) || 0) === 0) {
-          showBackendMessage("Mining task completed!", "success");
-          // TODO: Fetch mining result when backend is ready
+          // Check if already processing to prevent multiple calls
+          if (wsManager.isProcessingCompletion) {
+            return;
+          }
 
-          // clean up websocket and timer
+          // Check if timer was active (to avoid processing if already completed)
+          if (!timer.active) {
+            return;
+          }
+
+          wsManager.isProcessingCompletion = true;
+
+          // clean up websocket and timer first
           try { closeWebsocket(); } catch (e) {}
           try { clearTimerState(); } catch (e) {}
+
+          // Wait a bit to let backend process the task completion
+          await new Promise(resolve => setTimeout(resolve, 500));
+
+          try {
+            const resp = await authFetch(
+              `${API_BASE_URL}/town/mining/get_mining_task/`
+            );
+            if (!resp) {
+              wsManager.isProcessingCompletion = false;
+              return;
+            }
+
+            const data = await resp.json().catch(() => null);
+
+            if (resp.ok && data) {
+              // Store in localStorage
+              localStorage.setItem("mining_last_reward", JSON.stringify({
+                item: data.item ? String(data.item) : "",
+                description: data.description ? String(data.description) : "",
+                gold: data.gold != null ? Number(data.gold) : 0,
+              }));
+
+              showBackendMessage("Mining task completed!", "success");
+
+              // Reload page after 1 second
+              setTimeout(() => {
+                window.location.reload();
+              }, 1000);
+            }
+          } catch (err) {
+            console.error("Failed to fetch mining result:", err);
+          } finally {
+            wsManager.isProcessingCompletion = false;
+          }
         }
       } catch (err) {
         console.error("ws message parse error", err);
@@ -141,13 +274,16 @@ const startMiningActivity = async () => {
   }
   try {
     const response = await authFetch(
-      `${API_BASE_URL}/town/lifeskill/start_mining_task/`,
+      `${API_BASE_URL}/town/mining/start_mining_task/`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ duration: selectedDuration.value }),
       }
     );
+    if (!response) {
+      return;
+    }
     const body = await response.json().catch(() => null);
     if (response.ok) {
       showBackendMessage("Mining task started successfully", "success");
@@ -170,6 +306,9 @@ onMounted(async () => {
   const token = getAuthToken();
   if (!token) return;
   if (timer.active) openTimerWebsocket(token);
+
+  // Always check for mining results on mount
+  await getMiningTask();
 });
 </script>
 
@@ -229,9 +368,9 @@ onMounted(async () => {
         <button
           class="btn btn-success btn-mine"
           @click="startMiningActivity"
-          disabled
+          :disabled="!selectedDuration"
         >
-          To be added
+          Start Mining
         </button>
       </div>
 
@@ -253,7 +392,52 @@ onMounted(async () => {
       </div>
     </div>
 
-    <!-- TODO: Add mining result display similar to gathering when backend is ready -->
+    <!-- Mining result display -->
+    <div v-if="miningResult" class="result-card mt-4">
+      <div class="card bg-dark text-light">
+        <div
+          class="card-header d-flex justify-content-between align-items-center"
+          @click="isResultMinimized = !isResultMinimized"
+          style="cursor: pointer;"
+        >
+          <h5 class="mb-0">Last Mining Reward</h5>
+          <button
+            type="button"
+            class="btn btn-sm btn-outline-light minimize-btn"
+            @click.stop="isResultMinimized = !isResultMinimized"
+            :aria-label="isResultMinimized ? 'Maximize' : 'Minimize'"
+          >
+            {{ isResultMinimized ? '+' : '−' }}
+          </button>
+        </div>
+        <div v-show="!isResultMinimized" class="card-body">
+          <div class="reward-info">
+            <!-- Item image with hover tooltip -->
+            <div v-if="miningResult.item" class="item-display mb-3">
+              <div class="item-image-wrapper">
+                <img
+                  v-if="getMiningImage(miningResult.item)"
+                  :src="getMiningImage(miningResult.item)"
+                  :alt="getDisplayName(miningResult.item)"
+                  class="item-image"
+                />
+                <!-- Tooltip on hover with name and description -->
+                <div class="item-tooltip">
+                  <div class="tooltip-title">{{ getDisplayName(miningResult.item) }}</div>
+                  <div v-if="miningResult.description" class="tooltip-description">
+                    {{ miningResult.description }}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <p v-if="miningResult.gold !== undefined" class="mb-0 gold-amount">
+              <strong>Gold:</strong> <span class="text-warning">+{{ miningResult.gold }}</span>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -424,5 +608,140 @@ onMounted(async () => {
     width: 100%;
     max-width: none;
   }
+}
+
+/* Result card styling - compact */
+.result-card {
+  max-width: 450px;
+  margin: 1rem auto 0;
+}
+
+.result-card .card {
+  border: 2px solid #3a1c0e;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+}
+
+.result-card .card-header {
+  background-color: #2b2b2b;
+  border-bottom: 1px solid #444;
+  user-select: none;
+  padding: 0.5rem 1rem;
+}
+
+.result-card .card-header h5 {
+  font-size: 1rem;
+}
+
+.result-card .card-header:hover {
+  background-color: #333;
+}
+
+.minimize-btn {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  font-size: 1rem;
+  line-height: 1;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.minimize-btn:hover {
+  background-color: #495057;
+  border-color: #6c757d;
+}
+
+.result-card .card-body {
+  background-color: #1a1a1a;
+  padding: 1rem;
+}
+
+.reward-info p {
+  font-size: 1rem;
+}
+
+/* Item display styling - compact */
+.item-display {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.item-image-wrapper {
+  position: relative;
+  text-align: center;
+  cursor: pointer;
+  padding: 0.5rem;
+  width: 120px;
+  height: 120px;
+  margin: 0 auto;
+}
+
+.item-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+  background-color: rgba(255, 255, 255, 0.05);
+  padding: 0.5rem;
+  border: 2px solid #444;
+  transition: all 0.3s ease;
+}
+
+.item-image-wrapper:hover .item-image {
+  border-color: #6c757d;
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
+}
+
+/* Tooltip styling */
+.item-tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(0, 0, 0, 0.95);
+  color: #fff;
+  padding: 1rem;
+  border-radius: 6px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  margin-bottom: 0.5rem;
+  border: 1px solid #555;
+  z-index: 10;
+  min-width: 200px;
+  max-width: 300px;
+  white-space: normal;
+}
+
+.item-image-wrapper:hover .item-tooltip {
+  opacity: 1;
+}
+
+.tooltip-title {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #ffd700;
+  margin-bottom: 0.5rem;
+  text-align: center;
+}
+
+.tooltip-description {
+  font-size: 0.9rem;
+  color: #ddd;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.gold-amount {
+  text-align: center;
+  font-size: 1.1rem;
+}
+
+.gold-amount .text-warning {
+  font-weight: bold;
+  font-size: 1.3rem;
 }
 </style>
