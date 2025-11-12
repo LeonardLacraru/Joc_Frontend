@@ -4,8 +4,8 @@ import { authFetch } from "@/utils/authFetch";
 import { useBackendMessage } from "../utils/useBackendMessage.js";
 
 const { backendMessage, backendMessageType, showBackendMessage } = useBackendMessage();
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
-const API_BASE_WS = import.meta.env.VITE_API_BASE_URL_WSS;
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://ourgame.onrender.com/api";
+const API_BASE_WS = import.meta.env.VITE_API_BASE_URL_WSS || "wss://ourgame.onrender.com/ws";
 
 /*
   Module scoped manager so state and websockets survive component unmount/remount
