@@ -61,11 +61,6 @@ const activeTab = ref("gathering");
   transition: all 0.3s ease;
 }
 
-.tab-btn:hover {
-  background-color: #3a3a3a;
-  color: #d4af37;
-}
-
 /* Gathering tab - green theme */
 .gathering-tab-btn.active {
   background: linear-gradient(135deg, #3a6b1f 0%, #2d5016 100%);
@@ -75,7 +70,7 @@ const activeTab = ref("gathering");
 }
 
 .gathering-tab-btn:hover {
-  background-color: #2d5016;
+  background: linear-gradient(135deg, #3a6b1f 0%, #2d5016 100%);
   color: #fff;
 }
 
@@ -88,7 +83,7 @@ const activeTab = ref("gathering");
 }
 
 .mining-tab-btn:hover {
-  background-color: #5a4020;
+  background: linear-gradient(135deg, #7a5c30 0%, #5a4020 100%);
   color: #fff;
 }
 

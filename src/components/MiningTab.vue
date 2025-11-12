@@ -16,11 +16,15 @@ const wsManager = {
   isProcessingCompletion: false,
 };
 
+// reactive wrapper around manager timer so template updates
+const timer = ref({ active: false, minutes: 0, seconds: 0 });
+
 // load persisted timer if any
 try {
   const saved = JSON.parse(localStorage.getItem("mining_timer"));
   if (saved && typeof saved === "object") {
     wsManager.timer = { ...wsManager.timer, ...saved };
+    timer.value = { ...wsManager.timer };
   }
 } catch (e) {
   /* ignore parse errors */
@@ -43,9 +47,6 @@ const durations = [
   { value: 240, label: "4 hours" },
   { value: 480, label: "8 hours" },
 ];
-
-// reactive wrapper around manager timer so template updates
-const timer = reactive(wsManager.timer);
 
 // Item data mapping
 const miningItems = {
@@ -103,18 +104,18 @@ const getAuthToken = () => {
 };
 
 const setTimerState = (minutes, seconds) => {
-  timer.minutes = Number(minutes) || 0;
-  timer.seconds = Number(seconds) || 0;
-  timer.active = timer.minutes > 0 || timer.seconds > 0;
-  wsManager.timer = { ...timer };
+  const mins = Number(minutes) || 0;
+  const secs = Number(seconds) || 0;
+  const active = mins > 0 || secs > 0;
+
+  timer.value = { active, minutes: mins, seconds: secs };
+  wsManager.timer = { active, minutes: mins, seconds: secs };
   saveTimer();
 };
 
 const clearTimerState = () => {
-  timer.minutes = 0;
-  timer.seconds = 0;
-  timer.active = false;
-  wsManager.timer = { ...timer };
+  timer.value = { active: false, minutes: 0, seconds: 0 };
+  wsManager.timer = { active: false, minutes: 0, seconds: 0 };
   saveTimer();
 };
 
@@ -206,7 +207,7 @@ const openTimerWebsocket = (token) => {
           }
 
           // Check if timer was active (to avoid processing if already completed)
-          if (!timer.active) {
+          if (!timer.value.active) {
             return;
           }
 
@@ -305,7 +306,7 @@ const startMiningActivity = async () => {
 onMounted(async () => {
   const token = getAuthToken();
   if (!token) return;
-  if (timer.active) openTimerWebsocket(token);
+  if (timer.value.active) openTimerWebsocket(token);
 
   // Always check for mining results on mount
   await getMiningTask();
@@ -348,7 +349,8 @@ onMounted(async () => {
 
     <!-- Activity section -->
     <div class="activity-section">
-      <div class="duration-selector">
+      <!-- Show duration selector and button only when no active timer -->
+      <div v-if="!timer.active" class="duration-selector">
         <div class="duration-row">
           <label class="duration-label">Select Duration:</label>
           <select
@@ -374,7 +376,7 @@ onMounted(async () => {
         </button>
       </div>
 
-      <!-- timer display -->
+      <!-- timer display - only shown when active -->
       <div v-if="timer.active" class="timer-display">
         <strong>Time remaining:</strong>
         <span class="timer-value">
