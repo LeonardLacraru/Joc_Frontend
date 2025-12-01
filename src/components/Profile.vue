@@ -574,6 +574,18 @@ async function clearInventory() {
           </div>
         </div>
 
+        <!-- Lifeskill Section -->
+        <div class="lifeskill-section">
+          <div class="lifeskill-exp-label">Lifeskill Experience: {{ profile.lifeskill_experience || 0 }} / {{ (profile.lifeskill_level || 0) * 20 }}</div>
+          <div class="lifeskill-bar-container">
+            <div
+              class="lifeskill-bar"
+              :style="{ width: `${((profile.lifeskill_experience || 0) / ((profile.lifeskill_level || 0) * 20 || 1)) * 100}%` }"
+            ></div>
+            <div class="lifeskill-text">{{ Math.floor(((profile.lifeskill_experience || 0) / ((profile.lifeskill_level || 0) * 20 || 1)) * 100) }}%</div>
+          </div>
+        </div>
+
         <!-- Gold and trash -->
         <div class="gold-row">
           <span>Gold: {{ profile.gold }} 🟡</span>
@@ -584,7 +596,7 @@ async function clearInventory() {
 
       <!-- Column 3: Inventory -->
       <div class="inventory-section">
-        <h2 class="section-title">Inventory</h2>
+        <h2 class="section-title">Inventory ({{ inventory.length }}/30)</h2>
         <Inventory
           :key="counter"
           :items="gridInventory"
@@ -1066,6 +1078,47 @@ async function clearInventory() {
 }
 
 .exp-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-weight: bold;
+  color: #fff;
+  text-shadow: 0 0 4px #000;
+  pointer-events: none;
+}
+
+/* Lifeskill Section */
+.lifeskill-section {
+  background: linear-gradient(180deg, #22171b 70%, #181012 100%);
+  border: 2px solid #6a0f19;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.lifeskill-exp-label {
+  text-align: center;
+  margin-bottom: 0.5rem;
+  font-size: 0.95rem;
+}
+
+.lifeskill-bar-container {
+  position: relative;
+  width: 100%;
+  height: 1.5rem;
+  background: #1a0f15;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #6a0f19;
+}
+
+.lifeskill-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #9c27b0 0%, #6a1b9a 100%);
+  transition: width 0.3s ease;
+}
+
+.lifeskill-text {
   position: absolute;
   top: 50%;
   left: 50%;

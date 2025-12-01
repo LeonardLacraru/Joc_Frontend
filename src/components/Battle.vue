@@ -39,6 +39,8 @@ async function startBattle(selectedDifficulty) {
   // Reset preferences before starting new battle
   showRounds.value = false;
   expanded.value = {};
+  showInventoryFullWarning.value = false;
+
   try {
     const response = await authFetch(`${API_BASE_URL}/create_battle/`, {
       method: "POST",
@@ -51,6 +53,18 @@ async function startBattle(selectedDifficulty) {
       battle_data.value = data;
       if (typeof battle_data.value === "object") {
         console.log("Battle started successfully:", battle_data.value);
+
+        // Fetch profile to check inventory count
+        const profileResponse = await authFetch(`${API_BASE_URL}/profile/`);
+        if (profileResponse && profileResponse.ok) {
+          const profileData = await profileResponse.json();
+          const inventoryCount = profileData.inventory_items?.length || 0;
+
+          // Check if inventory is full
+          if (inventoryCount >= 30) {
+            showInventoryFullWarning.value = true;
+          }
+        }
       } else {
         showBackendMessage(battle_data.value, "error");
       }
@@ -99,6 +113,8 @@ async function heal() {
 const dungeonBattleData = ref(null);
 const dungeonExpanded = ref({});
 const showDungeonRounds = ref(false);
+const showInventoryFullWarning = ref(false);
+const showDungeonInventoryFullWarning = ref(false);
 
 async function startDungeonBattle(selectedDifficulty) {
   const payload = {
@@ -107,6 +123,8 @@ async function startDungeonBattle(selectedDifficulty) {
   // Reset preferences before starting new dungeon battle
   showDungeonRounds.value = false;
   dungeonExpanded.value = {};
+  showDungeonInventoryFullWarning.value = false;
+
   try {
     const response = await authFetch(`${API_BASE_URL}/create_dungeon/`, {
       method: "POST",
@@ -116,8 +134,19 @@ async function startDungeonBattle(selectedDifficulty) {
     if (response.ok) {
       const data = await response.json();
       console.log(data);
-      showBackendMessage("Dungeon battle started!", "success");
       dungeonBattleData.value = data;
+
+      // Fetch profile to check inventory count
+      const profileResponse = await authFetch(`${API_BASE_URL}/profile/`);
+      if (profileResponse && profileResponse.ok) {
+        const profileData = await profileResponse.json();
+        const inventoryCount = profileData.inventory_items?.length || 0;
+
+        // Check if inventory is full
+        if (inventoryCount >= 30) {
+          showDungeonInventoryFullWarning.value = true;
+        }
+      }
     } else {
       const errData = await response.json();
       showBackendMessage(errData.detail || JSON.stringify(errData), "error");
@@ -262,6 +291,9 @@ onMounted(async () => {
           <button class="battle-btn" @click="startBattle('hard')">
             Start Hard Battle
           </button>
+        </div>
+        <div v-if="showInventoryFullWarning" class="inventory-full-warning">
+          ⚠️ Inventory full! Items are no longer received. Maximum item count reached (30).
         </div>
         <div
           v-if="battle_data && typeof battle_data === 'object'"
@@ -432,12 +464,12 @@ onMounted(async () => {
         <template v-if="loadingProfile">
           <div class="loading-profile">Loading profile...</div>
         </template>
-        <template v-else-if="profile && profile.level < 10">
+        <template v-else-if="profile && profile.level < 5">
           <div class="unlock-message">
-            Dungeon Battle is unlocked at level 10
+            Dungeon Battle is unlocked at level 5
           </div>
         </template>
-        <template v-else-if="profile && profile.level >= 10">
+        <template v-else-if="profile && profile.level >= 5">
           <div class="dungeon-difficulty-buttons">
             <button
               class="battle-btn"
@@ -457,6 +489,9 @@ onMounted(async () => {
             >
               Hard Dungeon
             </button>
+          </div>
+          <div v-if="showDungeonInventoryFullWarning" class="inventory-full-warning">
+            ⚠️ Inventory full! Items are no longer received. Maximum item count reached (30).
           </div>
           <div
             v-if="dungeonBattleData && typeof dungeonBattleData === 'object'"
@@ -1036,5 +1071,17 @@ onMounted(async () => {
   font-size: 1.2rem;
   text-align: center;
   margin: 2rem 0;
+}
+.inventory-full-warning {
+  color: #ffbdbd;
+  background: #3a1818;
+  border: 1px solid #a33;
+  border-radius: 8px;
+  padding: 1rem 1.5rem;
+  font-size: 1.1rem;
+  text-align: center;
+  margin: 1rem 0;
+  font-weight: bold;
+  font-family: 'Cinzel', serif;
 }
 </style>

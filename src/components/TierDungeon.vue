@@ -12,6 +12,7 @@ const showRounds = ref(false);
 const dropdownOpen = ref(false);
 const profile = ref(null);
 const loadingProfile = ref(true);
+const showInventoryFullWarning = ref(false);
 
 const statLabels = {
   crit_dmg: "Critical Damage",
@@ -46,6 +47,8 @@ async function startTierDungeonBattle() {
   showRounds.value = false;
   expanded.value = {};
   battleData.value = null;
+  showInventoryFullWarning.value = false;
+
   try {
     const response = await authFetch(`${API_BASE_URL}/create_dungeon_tier/`, {
       method: "POST",
@@ -57,6 +60,18 @@ async function startTierDungeonBattle() {
       battleData.value = data;
       console.log(battleData.value)
       showBackendMessage("Tier Dungeon battle started!", "success");
+
+      // Fetch profile to check inventory count
+      const profileResponse = await authFetch(`${API_BASE_URL}/profile/`);
+      if (profileResponse && profileResponse.ok) {
+        const profileData = await profileResponse.json();
+        const inventoryCount = profileData.inventory_items?.length || 0;
+
+        // Check if inventory is full
+        if (inventoryCount >= 30) {
+          showInventoryFullWarning.value = true;
+        }
+      }
     } else {
       showBackendMessage(data.error || data.detail || "Unknown error", "error");
     }
@@ -127,8 +142,8 @@ onMounted(async () => {
       <template v-if="loadingProfile">
         <div class="loading-profile">Loading profile...</div>
       </template>
-      <template v-else-if="profile && profile.level < 20">
-        <div class="unlock-message">Tier Dungeon is unlocked at level 20</div>
+      <template v-else-if="profile && profile.level < 10">
+        <div class="unlock-message">Tier Dungeon is unlocked at level 10</div>
       </template>
       <template v-else>
         <div class="battle-header">
@@ -164,6 +179,9 @@ onMounted(async () => {
           <button class="battle-btn" @click="startTierDungeonBattle">
             Start Tier Dungeon
           </button>
+        </div>
+        <div v-if="showInventoryFullWarning" class="inventory-full-warning">
+          ⚠️ Inventory full! Items are no longer received. Maximum item count reached (30).
         </div>
         <div
           v-if="battleData && typeof battleData === 'object'"
@@ -648,5 +666,17 @@ onMounted(async () => {
   color: #e7d7b1;
   font-size: 1.1rem;
   margin-left: 0.3rem;
+}
+.inventory-full-warning {
+  color: #ffbdbd;
+  background: #3a1818;
+  border: 1px solid #a33;
+  border-radius: 8px;
+  padding: 1rem 1.5rem;
+  font-size: 1.1rem;
+  text-align: center;
+  margin: 1rem 0;
+  font-weight: bold;
+  font-family: 'Cinzel', serif;
 }
 </style>

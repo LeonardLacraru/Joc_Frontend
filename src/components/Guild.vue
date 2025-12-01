@@ -11,12 +11,26 @@ const loading = ref(true);
 const donateAmount = ref('');
 const levelUpLoading = ref(false);
 const showLeaveConfirm = ref(false);
+const showKickConfirm = ref(false);
+const playerToKick = ref(null);
+const currentUserCharacter = ref('');
 const showGuildInfo = ref(true); // New reactive variable
 const showRequests = ref(false); // New reactive variable
 const { backendMessage, backendMessageType, showBackendMessage } = useBackendMessage();
 
 const isOnline = (member) => true; // or your logic
 
+async function fetchCurrentUser() {
+    try {
+        const response = await authFetch(`${API_BASE_URL}/profile/`);
+        if (response && response.ok) {
+            const data = await response.json();
+            currentUserCharacter.value = data.character_name || '';
+        }
+    } catch (err) {
+        console.error('Error fetching current user:', err);
+    }
+}
 
 async function fetchGuilds() {
     try {
@@ -134,8 +148,9 @@ async function confirmLeaveGuild() {
 }
 
 
-onMounted(() => {
-    fetchGuilds();
+onMounted(async () => {
+    await fetchCurrentUser();
+    await fetchGuilds();
 });
 
 function getAvatar(race) {
@@ -164,6 +179,10 @@ const sortedMembers = computed(() => {
   });
 });
 
+const isCurrentUserLeader = computed(() => {
+  return currentUserCharacter.value === guild.value?.leader;
+});
+
 const requests = ref([]);
 
 async function fetchRequests() {
@@ -185,10 +204,10 @@ async function handleRequest(requestId, action) {
         const response = await authFetch(`${API_BASE_URL}/guild/${requestId}/${action}_request/`, {
             method: 'POST'
         });
-        
+
         if (response && response.ok) {
             await fetchRequests(); // First fetch new requests
-            
+
             // Only show success message if we still have requests
             if (requests.value.length > 0) {
                 showBackendMessage(`Request ${action}ed successfully!`, 'success');
@@ -202,6 +221,35 @@ async function handleRequest(requestId, action) {
         // Always show error messages
         showBackendMessage(`Error! ${err.message}`, 'error');
     }
+}
+
+function showKickConfirmation(member) {
+    playerToKick.value = member;
+    showKickConfirm.value = true;
+}
+
+async function kickPlayer() {
+    showKickConfirm.value = false;
+    if (!playerToKick.value) return;
+
+    try {
+        const response = await authFetch(`${API_BASE_URL}/guild/${playerToKick.value.id}/kick_player/`, {
+            method: 'POST'
+        });
+
+        if (response && response.ok) {
+            showBackendMessage(`${playerToKick.value.character_name} has been kicked from the guild.`, 'success');
+            await fetchGuilds();
+        } else {
+            const errData = await response.json();
+            let msg = errData.error || errData.detail || JSON.stringify(errData);
+            showBackendMessage(`Error! ${msg}`, 'error');
+        }
+    } catch (err) {
+        showBackendMessage(`Error! ${err.message}`, 'error');
+    }
+
+    playerToKick.value = null;
 }
 </script>
 
@@ -337,6 +385,7 @@ async function handleRequest(requestId, action) {
                 <th>Name</th>
                 <th>Level</th>
                 <th>Gold donated</th>
+                <th v-if="isCurrentUserLeader">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -348,6 +397,15 @@ async function handleRequest(requestId, action) {
                 </td>
                 <td>{{ member.level }}</td>
                 <td>{{ member.gold_donated || 0 }}</td>
+                <td v-if="isCurrentUserLeader" class="action-cell">
+                  <button
+                    v-if="member.character_name !== guild.leader"
+                    class="kick-btn"
+                    @click="showKickConfirmation(member)"
+                  >
+                    Kick
+                  </button>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -366,6 +424,15 @@ async function handleRequest(requestId, action) {
         <p>Are you sure you want to leave the guild?</p>
         <button @click="leaveGuild">Yes</button>
         <button @click="showLeaveConfirm = false">No</button>
+      </div>
+    </div>
+
+    <!-- Kick Confirmation Modal -->
+    <div v-if="showKickConfirm" class="modal-backdrop">
+      <div class="modal-content">
+        <p>Are you sure you want to kick {{ playerToKick?.character_name }} from the guild?</p>
+        <button @click="kickPlayer">Yes</button>
+        <button @click="showKickConfirm = false; playerToKick = null">No</button>
       </div>
     </div>
   </div>
@@ -832,6 +899,9 @@ async function handleRequest(requestId, action) {
   padding: 1.5rem;
   margin-top: 1rem;
   box-shadow: 0 2px 8px #0005;
+  max-height: 70vh;
+  overflow-y: auto;
+  width: 100%;
 }
 
 .members-table {
@@ -936,5 +1006,27 @@ async function handleRequest(requestId, action) {
     padding: 2rem;
     font-size: 1.1rem;
     font-style: italic;
+}
+
+.action-cell {
+    text-align: center;
+}
+
+.kick-btn {
+    background: #3a1818;
+    color: #ffbdbd;
+    border: 1px solid #a33;
+    border-radius: 6px;
+    padding: 0.4rem 1rem;
+    font-size: 0.95rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+}
+
+.kick-btn:hover {
+    background: #5a2222;
+    border-color: #c44;
+    color: #ffd7d7;
 }
 </style>

@@ -12,23 +12,13 @@ const API_BASE_WS = import.meta.env.VITE_API_BASE_URL_WSS
 */
 const wsManager = {
   ws: null,
-  timer: { active: false, minutes: 0, seconds: 0 },
+  timer: { active: false, remainingTime: 0 },
   isProcessingCompletion: false,
+  localTimerInterval: null,
 };
 
 // reactive wrapper around manager timer so template updates
 const timer = ref({ active: false, minutes: 0, seconds: 0 });
-
-// load persisted timer if any
-try {
-  const saved = JSON.parse(localStorage.getItem("mining_timer"));
-  if (saved && typeof saved === "object") {
-    wsManager.timer = { ...wsManager.timer, ...saved };
-    timer.value = { ...wsManager.timer };
-  }
-} catch (e) {
-  /* ignore parse errors */
-}
 
 const saveTimer = () => {
   try {
@@ -75,6 +65,9 @@ const miningResult = ref(loadMiningResult());
 // Track if the result card is minimized
 const isResultMinimized = ref(false);
 
+// Cancel confirmation modal state
+const showCancelConfirm = ref(false);
+
 // Get image path for mining item
 const getMiningImage = (itemName) => {
   if (!itemName) return null;
@@ -103,19 +96,82 @@ const getAuthToken = () => {
   );
 };
 
-const setTimerState = (minutes, seconds) => {
-  const mins = Number(minutes) || 0;
-  const secs = Number(seconds) || 0;
-  const active = mins > 0 || secs > 0;
+const startLocalTimer = (remainingSeconds) => {
+  // Clear any existing timer
+  if (wsManager.localTimerInterval) {
+    clearInterval(wsManager.localTimerInterval);
+    wsManager.localTimerInterval = null;
+  }
 
-  timer.value = { active, minutes: mins, seconds: secs };
-  wsManager.timer = { active, minutes: mins, seconds: secs };
+  wsManager.timer.remainingTime = Math.max(0, remainingSeconds);
+  wsManager.timer.active = remainingSeconds > 0;
+
+  // Update display
+  const updateDisplay = () => {
+    const totalSeconds = Math.max(0, wsManager.timer.remainingTime);
+    timer.value = {
+      active: wsManager.timer.active,
+      minutes: Math.floor(totalSeconds / 60),
+      seconds: totalSeconds % 60
+    };
+  };
+
+  updateDisplay();
   saveTimer();
+
+  if (remainingSeconds > 0) {
+    wsManager.localTimerInterval = setInterval(async () => {
+      wsManager.timer.remainingTime--;
+
+      if (wsManager.timer.remainingTime <= 0) {
+        wsManager.timer.remainingTime = 0;
+        wsManager.timer.active = false;
+        clearInterval(wsManager.localTimerInterval);
+        wsManager.localTimerInterval = null;
+
+        // Fetch rewards when timer reaches 0
+        if (!wsManager.isProcessingCompletion) {
+          wsManager.isProcessingCompletion = true;
+          try {
+            const resp = await authFetch(
+              `${API_BASE_URL}/town/mining/get_mining_task/`
+            );
+            if (resp && resp.ok) {
+              const data = await resp.json().catch(() => null);
+              if (data && (data.item || data.description || data.gold != null)) {
+                const result = {
+                  item: data.item ? String(data.item) : "",
+                  description: data.description ? String(data.description) : "",
+                  gold: data.gold != null ? Number(data.gold) : 0,
+                  experience: data.experience != null ? Number(data.experience) : 0,
+                };
+                localStorage.setItem("mining_last_reward", JSON.stringify(result));
+                miningResult.value = result;
+                isResultMinimized.value = false;
+                showBackendMessage("Mining task completed!", "success");
+              }
+            }
+          } catch (err) {
+            console.error("Failed to fetch mining result:", err);
+          } finally {
+            wsManager.isProcessingCompletion = false;
+          }
+        }
+      }
+
+      updateDisplay();
+      saveTimer();
+    }, 1000);
+  }
 };
 
 const clearTimerState = () => {
+  if (wsManager.localTimerInterval) {
+    clearInterval(wsManager.localTimerInterval);
+    wsManager.localTimerInterval = null;
+  }
   timer.value = { active: false, minutes: 0, seconds: 0 };
-  wsManager.timer = { active: false, minutes: 0, seconds: 0 };
+  wsManager.timer = { active: false, remainingTime: 0 };
   saveTimer();
 };
 
@@ -150,6 +206,7 @@ const getMiningTask = async () => {
         item: data.item ? String(data.item) : "",
         description: data.description ? String(data.description) : "",
         gold: data.gold != null ? Number(data.gold) : 0,
+        experience: data.experience != null ? Number(data.experience) : 0,
       };
       localStorage.setItem("mining_last_reward", JSON.stringify(result));
       // Update reactive ref
@@ -187,27 +244,24 @@ const openTimerWebsocket = (token) => {
           return;
         }
 
-        const mins =
-          payload["remaining minutes"] ??
-          payload["remaining_minutes"] ??
-          payload.remaining_minutes ??
-          0;
-        const secs =
-          payload["remaining_seconds"] ??
-          payload["remaining seconds"] ??
-          payload.remainingSeconds ??
-          0;
-        setTimerState(mins, secs);
+        const status = payload.status;
 
-        // if finished, call backend endpoint
-        if ((Number(mins) || 0) === 0 && (Number(secs) || 0) === 0) {
+        // Handle sync or active status - update local timer
+        if (status === "sync" || status === "active") {
+          const completionTime = payload.completion_time;
+          const serverTime = payload.server_time;
+
+          if (completionTime && serverTime) {
+            // Calculate remaining seconds
+            const remainingSeconds = Math.max(0, Math.floor(completionTime - serverTime));
+            startLocalTimer(remainingSeconds);
+          }
+        }
+
+        // Handle finished status
+        if (status === "finished") {
           // Check if already processing to prevent multiple calls
           if (wsManager.isProcessingCompletion) {
-            return;
-          }
-
-          // Check if timer was active (to avoid processing if already completed)
-          if (!timer.value.active) {
             return;
           }
 
@@ -216,9 +270,6 @@ const openTimerWebsocket = (token) => {
           // clean up websocket and timer first
           try { closeWebsocket(); } catch (e) {}
           try { clearTimerState(); } catch (e) {}
-
-          // Wait a bit to let backend process the task completion
-          await new Promise(resolve => setTimeout(resolve, 500));
 
           try {
             const resp = await authFetch(
@@ -233,18 +284,19 @@ const openTimerWebsocket = (token) => {
 
             if (resp.ok && data) {
               // Store in localStorage
-              localStorage.setItem("mining_last_reward", JSON.stringify({
+              const result = {
                 item: data.item ? String(data.item) : "",
                 description: data.description ? String(data.description) : "",
                 gold: data.gold != null ? Number(data.gold) : 0,
-              }));
+                experience: data.experience != null ? Number(data.experience) : 0,
+              };
+              localStorage.setItem("mining_last_reward", JSON.stringify(result));
+
+              // Update reactive ref immediately to show rewards
+              miningResult.value = result;
+              isResultMinimized.value = false;
 
               showBackendMessage("Mining task completed!", "success");
-
-              // Reload page after 1 second
-              setTimeout(() => {
-                window.location.reload();
-              }, 1000);
             }
           } catch (err) {
             console.error("Failed to fetch mining result:", err);
@@ -302,8 +354,53 @@ const startMiningActivity = async () => {
   }
 };
 
+// Cancel mining task
+const cancelMiningTask = async () => {
+  try {
+    const response = await authFetch(
+      `${API_BASE_URL}/town/mining/cancel_mining_task/`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+    if (!response) {
+      showCancelConfirm.value = false;
+      return;
+    }
+    const body = await response.json().catch(() => null);
+    if (response.ok) {
+      showBackendMessage("Mining task cancelled", "success");
+      closeWebsocket();
+      clearTimerState();
+      showCancelConfirm.value = false;
+    } else {
+      showBackendMessage(
+        (body && (body.message || body.detail)) || "Failed to cancel mining task",
+        "error"
+      );
+      showCancelConfirm.value = false;
+    }
+  } catch (error) {
+    console.error("Error cancelling task:", error);
+    showBackendMessage("Failed to cancel mining task", "error");
+    showCancelConfirm.value = false;
+  }
+};
+
 // On component mount
 onMounted(async () => {
+  // Try to restore saved timer state and start local timer
+  try {
+    const saved = JSON.parse(localStorage.getItem("mining_timer"));
+    if (saved && typeof saved === "object" && saved.remainingTime > 0 && saved.active) {
+      // Start the local timer with the saved remaining time
+      startLocalTimer(saved.remainingTime);
+    }
+  } catch (e) {
+    /* ignore parse errors */
+  }
+
   const token = getAuthToken();
   if (!token) return;
   if (timer.value.active) openTimerWebsocket(token);
@@ -391,6 +488,25 @@ onMounted(async () => {
             }}s
           </template>
         </span>
+        <button
+          class="btn btn-danger btn-cancel mt-3"
+          @click="showCancelConfirm = true"
+        >
+          Cancel Task
+        </button>
+      </div>
+    </div>
+
+    <!-- Cancel Confirmation Modal -->
+    <div v-if="showCancelConfirm" class="modal-overlay" @click="showCancelConfirm = false">
+      <div class="modal-box" @click.stop>
+        <h3>Cancel Mining Task?</h3>
+        <p class="warning-text">⚠️ If you cancel this task, no rewards will be given!</p>
+        <p>Are you sure you want to cancel?</p>
+        <div class="modal-buttons">
+          <button class="btn-cancel-modal" @click="showCancelConfirm = false">No, Continue Task</button>
+          <button class="btn-danger-modal" @click="cancelMiningTask">Yes, Cancel Task</button>
+        </div>
       </div>
     </div>
 
@@ -433,8 +549,11 @@ onMounted(async () => {
               </div>
             </div>
 
-            <p v-if="miningResult.gold !== undefined" class="mb-0 gold-amount">
+            <p v-if="miningResult.gold !== undefined" class="mb-2 gold-amount">
               <strong>Gold:</strong> <span class="text-warning">+{{ miningResult.gold }}</span>
+            </p>
+            <p v-if="miningResult.experience !== undefined" class="mb-0 exp-amount">
+              <strong>Experience:</strong> <span class="text-success">+{{ miningResult.experience }}</span>
             </p>
           </div>
         </div>
@@ -545,13 +664,15 @@ onMounted(async () => {
 }
 
 .btn-mine {
-  padding: 0.6rem 2rem;
-  font-size: 1.1rem;
+  padding: 0.4rem 1.2rem;
+  font-size: 0.95rem;
   font-weight: bold;
   border-radius: 8px;
   transition: all 0.3s ease;
   border: 2px solid #5a4020;
   background: linear-gradient(135deg, #7a5c30 0%, #5a4020 100%);
+  width: auto;
+  max-width: fit-content;
 }
 
 .btn-mine:hover:not(:disabled) {
@@ -567,12 +688,16 @@ onMounted(async () => {
 
 .timer-display {
   margin-top: 1.5rem;
-  padding: 1rem;
+  padding: 0.75rem;
   background-color: rgba(0, 0, 0, 0.4);
   border-radius: 8px;
   border: 2px solid #4a3c2e;
   color: #d4af37;
   font-size: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
 }
 
 .timer-value {
@@ -745,5 +870,117 @@ onMounted(async () => {
 .gold-amount .text-warning {
   font-weight: bold;
   font-size: 1.3rem;
+}
+
+.exp-amount {
+  text-align: center;
+  font-size: 1.1rem;
+}
+
+.exp-amount .text-success {
+  font-weight: bold;
+  font-size: 1.3rem;
+}
+
+/* Cancel button */
+.btn-cancel {
+  padding: 0.4rem 1.2rem;
+  font-size: 0.9rem;
+  font-weight: bold;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  border: 2px solid #a52222;
+  background: linear-gradient(135deg, #d32f2f 0%, #a52222 100%);
+  color: white;
+  width: auto;
+  max-width: fit-content;
+  margin-top: 0;
+}
+
+.btn-cancel:hover {
+  background: linear-gradient(135deg, #e33f3f 0%, #b53232 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(211, 47, 47, 0.5);
+}
+
+/* Modal styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+}
+
+.modal-box {
+  background: linear-gradient(135deg, #1a1a22 80%, #2d1a1a 100%);
+  border: 2px solid #7a3a3a;
+  border-radius: 12px;
+  padding: 2rem;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+}
+
+.modal-box h3 {
+  color: #d4af37;
+  margin-bottom: 1rem;
+  text-align: center;
+  font-size: 1.5rem;
+}
+
+.modal-box p {
+  color: #e0cfa9;
+  margin-bottom: 1rem;
+  text-align: center;
+  font-size: 1.1rem;
+}
+
+.warning-text {
+  color: #ff6b6b;
+  font-weight: bold;
+  font-size: 1rem;
+}
+
+.modal-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 1.5rem;
+}
+
+.btn-cancel-modal, .btn-danger-modal {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-cancel-modal {
+  background: #4a4a4a;
+  color: #fff;
+}
+
+.btn-cancel-modal:hover {
+  background: #5a5a5a;
+  transform: translateY(-2px);
+}
+
+.btn-danger-modal {
+  background: linear-gradient(135deg, #d32f2f 0%, #a52222 100%);
+  color: #fff;
+}
+
+.btn-danger-modal:hover {
+  background: linear-gradient(135deg, #e33f3f 0%, #b53232 100%);
+  transform: translateY(-2px);
 }
 </style>
