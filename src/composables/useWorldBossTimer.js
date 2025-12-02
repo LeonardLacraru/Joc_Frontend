@@ -126,8 +126,8 @@ export function useWorldBossTimer() {
   onMounted(() => {
     instanceCount++;
 
-    // Only start timer once (for the first instance)
-    if (instanceCount === 1) {
+    // Start timer if not already running
+    if (!timeInterval) {
       // Fetch initial status, but don't start polling yet
       // Polling will only start if boss is active
       fetchBossStatus();
