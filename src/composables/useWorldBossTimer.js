@@ -44,7 +44,7 @@ export function useWorldBossTimer() {
         // Check if backend says no active event
         if (data.message === "No active event") {
           bossStatus.value = null;
-          stopPolling();
+          // Keep polling to detect when a new event starts
           return;
         }
 
@@ -57,32 +57,25 @@ export function useWorldBossTimer() {
 
           if (now >= endTime) {
             bossStatus.value = null;
-            stopPolling();
+            // Keep polling to detect new events
           } else {
-            // Only update status, don't call startPolling here
-            // Polling should already be running, or will be started externally
-            const wasNull = bossStatus.value === null;
+            // Update boss status
             bossStatus.value = data;
-
-            // Only start polling if this is the first time we got an active boss
-            if (wasNull) {
-              startPolling();
-            }
           }
         } else {
           // No active boss
           bossStatus.value = null;
-          stopPolling();
+          // Keep polling to detect new events
         }
       } else {
         // Response not OK - no active boss
         bossStatus.value = null;
-        stopPolling();
+        // Keep polling to detect new events
       }
     } catch (err) {
       console.error('Failed to fetch world boss status:', err);
       bossStatus.value = null;
-      stopPolling();
+      // Keep polling even on error
     }
   }
 
@@ -101,9 +94,10 @@ export function useWorldBossTimer() {
   }
 
   function startPolling() {
-    // Only poll if not already polling AND boss is actually active
-    if (!statusInterval && bossStatus.value) {
-      // Fetch boss status every 15 seconds to stay in sync
+    // Start polling if not already running
+    // Poll regardless of boss status to detect new events
+    if (!statusInterval) {
+      // Fetch boss status every 15 seconds to stay in sync and detect new events
       statusInterval = setInterval(fetchBossStatus, 15000);
     }
   }
@@ -126,13 +120,14 @@ export function useWorldBossTimer() {
   onMounted(() => {
     instanceCount++;
 
-    // Start timer if not already running
+    // Start timer and polling if not already running
     if (!timeInterval) {
-      // Fetch initial status, but don't start polling yet
-      // Polling will only start if boss is active
+      // Fetch initial status
       fetchBossStatus();
       // Start the countdown timer (this updates every 100ms)
       startTimer();
+      // Start polling to detect new events
+      startPolling();
     }
   });
 
