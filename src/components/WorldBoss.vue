@@ -2,8 +2,10 @@
 import { ref, computed, onMounted } from "vue";
 import { authFetch } from "../utils/authFetch.js";
 import { useBackendMessage } from "../utils/useBackendMessage.js";
+import { useWorldBossTimer } from "../composables/useWorldBossTimer.js";
 
 const { backendMessage, backendMessageType, showBackendMessage } = useBackendMessage();
+const { fetchBossStatus } = useWorldBossTimer();
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const profile = ref({});
@@ -16,7 +18,6 @@ async function fetchProfile() {
     if (response.ok) {
       const data = await response.json();
       profile.value = data;
-      console.log(profile.value);
     }
   } catch {}
 }
@@ -96,6 +97,8 @@ async function createEvent() {
       const msg =
         data.success || data.detail || data.message || JSON.stringify(data);
       showBackendMessage(msg, "success");
+      // Refresh boss status to show timer
+      await fetchBossStatus();
     } else {
       const errData = await response.json();
       const msg = errData.error || errData.detail || JSON.stringify(errData);

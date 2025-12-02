@@ -41,6 +41,10 @@ const gridInventory = computed(() => {
   return slots;
 });
 
+const isInventoryFull = computed(() => {
+  return inventory.value.length >= SLOT_COUNT;
+});
+
 function handleInventoryItemClick(item, event) {
   if (selectedItem.value?.id === item.id) {
     selectedItem.value = null;
@@ -378,16 +382,23 @@ async function CancelSell(itemId) {
                   </span>
                 </div>
               </div>
-              <div class="tt-font seller-info">
-                Seller: {{ item.seller }}
-              </div>
             </div>
           </div>
           <div class="item-info-wrapper">
+            <div class="seller-name">{{ item.seller }}</div>
             <div class="item-price-large">{{ item.price }}🟡</div>
-            <button class="market-action-btn buy-btn" @click="BuyItem(item.id)">
-              Buy
-            </button>
+            <div class="buy-btn-wrapper">
+              <button
+                class="market-action-btn buy-btn"
+                @click="BuyItem(item.id)"
+                :disabled="isInventoryFull"
+              >
+                Buy
+              </button>
+              <div v-if="isInventoryFull" class="inventory-full-tooltip">
+                Inventory full
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -567,6 +578,13 @@ async function CancelSell(itemId) {
   justify-content: center;
 }
 
+.seller-name {
+  font-size: 0.9rem;
+  color: #c9b8a0;
+  font-style: italic;
+  text-align: center;
+}
+
 .item-price-large {
   font-size: 1.3rem;
   font-weight: bold;
@@ -588,15 +606,50 @@ async function CancelSell(itemId) {
   font-family: 'Cinzel', serif;
 }
 
+.buy-btn-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 120px;
+}
+
 .buy-btn {
   background: linear-gradient(135deg, #3a6b1f 0%, #2d5016 100%);
   color: #fff;
 }
 
-.buy-btn:hover {
+.buy-btn:hover:not(:disabled) {
   background: linear-gradient(135deg, #4a7b2f 0%, #3d6026 100%);
   transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(58, 107, 31, 0.4);
+}
+
+.buy-btn:disabled {
+  background: linear-gradient(135deg, #4a4a4a 0%, #3a3a3a 100%);
+  color: #888;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.inventory-full-tooltip {
+  display: none;
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.95);
+  color: #ffbdbd;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  margin-bottom: 0.5rem;
+  border: 1px solid #a33;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.buy-btn-wrapper:hover .inventory-full-tooltip {
+  display: block;
 }
 
 .cancel-btn {
@@ -608,12 +661,6 @@ async function CancelSell(itemId) {
   background: linear-gradient(135deg, #8a4a4a 0%, #6a3a3a 100%);
   transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(122, 58, 58, 0.4);
-}
-
-.seller-info {
-  margin-top: 0.5rem;
-  color: #c9b8a0;
-  font-style: italic;
 }
 
 /* Floating Sell Price Panel */

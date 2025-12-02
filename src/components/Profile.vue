@@ -28,7 +28,9 @@ const showActionPanel = ref(false);
 const enchantItems = ref({});
 const gatheringItems = ref({});
 const miningItems = ref({});
-const activeTab = ref('gathering');
+const rightTab = ref('inventory'); // 'inventory', 'stats'
+const inventorySubTab = ref('items'); // 'items', 'materials'
+const materialsSubTab = ref('gathering'); // 'gathering', 'enchant', 'mining'
 const statLabels = {
   crit_dmg: "Critical Damage",
   crit_rate: "Critical Rate",
@@ -269,6 +271,11 @@ function getMiningDisplayName(itemName) {
 
 async function equipItem(itemId) {
   try {
+    // Hide action panel and clear selections BEFORE the API call
+    selectedItem.value = null;
+    selectedEquippedItem.value = null;
+    showActionPanel.value = false;
+
     const response = await authFetch(
       `${API_BASE_URL}/inventory/equip/${itemId}/`,
       {
@@ -281,9 +288,6 @@ async function equipItem(itemId) {
     }
     if (response.ok) {
       showBackendMessage("Item equipped!", "success");
-      selectedItem.value = null;
-      selectedEquippedItem.value = null;
-      showActionPanel.value = false;
       await fetchProfile();
     } else {
       const errData = await response.json();
@@ -297,6 +301,11 @@ async function equipItem(itemId) {
 
 async function sellItem(itemId) {
   try {
+    // Hide action panel and clear selections BEFORE the API call
+    selectedItem.value = null;
+    selectedEquippedItem.value = null;
+    showActionPanel.value = false;
+
     const response = await authFetch(`${API_BASE_URL}/inventory/${itemId}/`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
@@ -307,9 +316,6 @@ async function sellItem(itemId) {
     if (response.ok) {
       counter.value++;
       showButton.value = false;
-      selectedItem.value = null;
-      selectedEquippedItem.value = null;
-      showActionPanel.value = false;
       await fetchProfile();
       showBackendMessage("Item sold!", "success");
       setTimeout(() => {
@@ -356,6 +362,44 @@ const equippedByType = computed(() => {
     }
   }
   return mapping;
+});
+
+// Convert materials to grid format (like inventory items)
+const MATERIAL_SLOT_COUNT = 30; // 6 rows x 5 columns = 30 slots
+
+const materialsGridData = computed(() => {
+  let items = [];
+
+  if (materialsSubTab.value === 'gathering') {
+    items = Object.entries(gatheringItems.value).map(([name, quantity]) => ({
+      name,
+      quantity,
+      type: 'gathering',
+      displayName: gatheringItemsMapping[name]?.displayName || formatItemName(name)
+    }));
+  } else if (materialsSubTab.value === 'enchant') {
+    items = Object.entries(enchantItems.value).map(([name, quantity]) => ({
+      name,
+      quantity,
+      type: 'enchant',
+      displayName: `Stone of ${capitalize(name)}`
+    }));
+  } else if (materialsSubTab.value === 'mining') {
+    items = Object.entries(miningItems.value).map(([name, quantity]) => ({
+      name,
+      quantity,
+      type: 'mining',
+      displayName: miningItemsMapping[name]?.displayName || formatItemName(name)
+    }));
+  }
+
+  // Fill remaining slots with null
+  const slots = Array(MATERIAL_SLOT_COUNT).fill(null);
+  for (let i = 0; i < items.length && i < MATERIAL_SLOT_COUNT; i++) {
+    slots[i] = items[i];
+  }
+
+  return slots;
 });
 
 // Clear inventory confirmation
@@ -462,239 +506,260 @@ async function clearInventory() {
       {{ backendMessage }}
     </div>
 
-    <!-- Main Grid Layout -->
-    <div class="profile-grid">
-      <!-- Column 1: Equipment -->
-      <div class="equipment-section">
-        <h2 class="section-title">Equipment</h2>
-        <div class="equipment-grid">
-          <div
-            v-for="slot in equipmentSlots"
-            :key="slot.type"
-            class="equipment-slot"
-            :style="{ gridArea: slot.gridArea }"
-          >
-            <template v-if="equippedByType[slot.type]">
-              <div
-                class="item-wrapper"
-                :class="[
-                  { 'item-selected': selectedEquippedItem?.id === equippedByType[slot.type].id },
-                  `rarity-border-${equippedByType[slot.type].item.rarity}`
-                ]"
-                @click="selectEquippedItem(equippedByType[slot.type], $event)"
-              >
-                <img
-                  :src="generateImageName(equippedByType[slot.type].item.name)"
-                  class="item-img"
-                  :alt="equippedByType[slot.type].item.name"
-                  @error="handleImageError"
-                />
-                <div class="item-tooltip">
-                  <div class="tooltip-equipped">Equipped</div>
-                  <div class="tooltip-name" :class="`rarity-${equippedByType[slot.type].item.rarity}`">
-                    {{ equippedByType[slot.type].item.name }} +{{ equippedByType[slot.type].item.enchant_level }}
-                  </div>
-                  <div class="tooltip-info">Required Level: {{ equippedByType[slot.type].item.required_level }}</div>
-                  <div class="tooltip-info">Sell: {{ equippedByType[slot.type].item.required_gold }} 🟡</div>
-                  <div v-if="equippedByType[slot.type].item.stats?.length" class="tooltip-stats">
-                    Stats:
-                    <div v-for="(stat, sidx) in equippedByType[slot.type].item.stats" :key="sidx">
-                      {{ statLabels[stat.name] || stat.name }}:
-                      {{ ["crit_rate", "hit_rate", "lifesteal"].includes(stat.name) ? stat.value + "%" : stat.value }}
+    <!-- Main Layout: Left Equipment, Right Content -->
+    <div class="main-layout">
+      <!-- Left Side: Equipment (Always Visible) -->
+      <div class="left-panel">
+        <div class="equipment-section">
+          <h2 class="section-title">Equipment</h2>
+          <div class="equipment-grid">
+            <div
+              v-for="slot in equipmentSlots"
+              :key="slot.type"
+              class="equipment-slot"
+              :style="{ gridArea: slot.gridArea }"
+            >
+              <template v-if="equippedByType[slot.type]">
+                <div
+                  class="item-wrapper"
+                  :class="[
+                    { 'item-selected': selectedEquippedItem?.id === equippedByType[slot.type].id },
+                    `rarity-border-${equippedByType[slot.type].item.rarity}`
+                  ]"
+                  @click="selectEquippedItem(equippedByType[slot.type], $event)"
+                >
+                  <img
+                    :src="generateImageName(equippedByType[slot.type].item.name)"
+                    class="item-img"
+                    :alt="equippedByType[slot.type].item.name"
+                    @error="handleImageError"
+                  />
+                  <div class="item-tooltip">
+                    <div class="tooltip-equipped">Equipped</div>
+                    <div class="tooltip-name" :class="`rarity-${equippedByType[slot.type].item.rarity}`">
+                      {{ equippedByType[slot.type].item.name }} +{{ equippedByType[slot.type].item.enchant_level }}
+                    </div>
+                    <div class="tooltip-info">Required Level: {{ equippedByType[slot.type].item.required_level }}</div>
+                    <div class="tooltip-info">Sell: {{ equippedByType[slot.type].item.required_gold }} 🟡</div>
+                    <div v-if="equippedByType[slot.type].item.stats?.length" class="tooltip-stats">
+                      Stats:
+                      <div v-for="(stat, sidx) in equippedByType[slot.type].item.stats" :key="sidx">
+                        {{ statLabels[stat.name] || stat.name }}:
+                        {{ ["crit_rate", "hit_rate", "lifesteal"].includes(stat.name) ? stat.value + "%" : stat.value }}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            </template>
-            <template v-else>
-              <div class="empty-slot">{{ slot.label }}</div>
-            </template>
-          </div>
-        </div>
-      </div>
-
-      <!-- Column 2: Stats -->
-      <div class="stats-section">
-        <div class="stats-box">
-          <h2 class="section-title">Character Stats</h2>
-          <div class="stat-row">Level: {{ profile.level || 0 }}</div>
-          <div v-if="profile.total_stats">
-            <div v-for="[key, value] in filteredStats" :key="key" class="stat-row-upgrade">
-              <span class="stat-label">
-                <template v-if="key === 'hp'">
-                  {{ statLabels[key] || key }}: {{ current_hp }}/{{ value }}
-                </template>
-                <template v-else>
-                  {{ statLabels[key] || key }}: {{ value.toFixed(2) }}
-                </template>
-              </span>
-              <span class="stat-controls">
-                <span class="stat-price">{{
-                  key === 'strength' ? str_cost :
-                  key === 'dexterity' ? dex_cost :
-                  key === 'intelligence' ? int_cost :
-                  key === 'hp' ? hp_cost : 0
-                }} 🟡</span>
-                <button
-                  class="stat-btn"
-                  @click="upgradeStat(key)"
-                  :disabled="profile.gold < (
-                    key === 'strength' ? str_cost :
-                    key === 'dexterity' ? dex_cost :
-                    key === 'intelligence' ? int_cost :
-                    key === 'hp' ? hp_cost : 0
-                  )"
-                >+</button>
-              </span>
+              </template>
+              <template v-else>
+                <div class="empty-slot">{{ slot.label }}</div>
+              </template>
             </div>
           </div>
         </div>
 
-        <div class="stats-box">
-          <h2 class="section-title">Total Stats</h2>
-          <div v-if="profile.total_stats">
-            <div v-for="[key, value] in filteredTotalStats" :key="key" class="stat-row">
-              {{ statLabels[key] || key }}:
-              {{
-                key === "hp" ? current_hp + "/" + value :
-                ["lifesteal", "crit_rate", "crit_dmg", "hit_rate"].includes(key) ?
-                (typeof value === "number" ? value.toFixed(2) : value) + "%" :
-                typeof value === "number" ? value.toFixed(2) : value
-              }}
+        <!-- Level Info Section -->
+        <div class="level-info-section">
+          <div class="level-display">
+            <div class="level-text">Character Level: {{ profile.level || 0 }}</div>
+            <div class="level-bar-container">
+              <div class="level-bar" :style="{ width: `${(profile.experience / (profile.level * 40)) * 100}%` }"></div>
+              <div class="level-bar-text">{{ Math.floor((profile.experience / (profile.level * 40)) * 100) }}%</div>
+            </div>
+          </div>
+          <div class="lifeskill-display">
+            <div class="lifeskill-text">Lifeskill level: {{ profile.lifeskill_level || 0 }}</div>
+            <div class="lifeskill-bar-container-small">
+              <div class="lifeskill-bar-small" :style="{ width: `${((profile.lifeskill_experience || 0) / ((profile.lifeskill_level || 1) * 20)) * 100}%` }"></div>
+              <div class="lifeskill-bar-text">{{ Math.floor(((profile.lifeskill_experience || 0) / ((profile.lifeskill_level || 1) * 20)) * 100) }}%</div>
             </div>
           </div>
         </div>
 
-        <!-- Experience bar -->
-        <div class="experience-section">
-          <div class="exp-label">Experience: {{ profile.experience }} / {{ profile.level * 40 || 0 }}</div>
-          <div class="exp-bar-container">
-            <div class="exp-bar" :style="{ width: `${(profile.experience / (profile.level * 40)) * 100}%` }"></div>
-            <div class="exp-text">{{ Math.floor((profile.experience / (profile.level * 40)) * 100) }}%</div>
-          </div>
-        </div>
-
-        <!-- Lifeskill Section -->
-        <div class="lifeskill-section">
-          <div class="lifeskill-exp-label">Lifeskill Experience: {{ profile.lifeskill_experience || 0 }} / {{ (profile.lifeskill_level || 0) * 20 }}</div>
-          <div class="lifeskill-bar-container">
-            <div
-              class="lifeskill-bar"
-              :style="{ width: `${((profile.lifeskill_experience || 0) / ((profile.lifeskill_level || 0) * 20 || 1)) * 100}%` }"
-            ></div>
-            <div class="lifeskill-text">{{ Math.floor(((profile.lifeskill_experience || 0) / ((profile.lifeskill_level || 0) * 20 || 1)) * 100) }}%</div>
-          </div>
-        </div>
-
-        <!-- Gold and trash -->
-        <div class="gold-row">
-          <span>Gold: {{ profile.gold }} 🟡</span>
-          <span>Clear inventory</span>
-          <span><button class="trash-btn" @click="openClearInventory" title="Clear Inventory">🗑️</button></span>
+        <!-- Gold and Clear Inventory -->
+        <div class="equipment-info-section">
+          <div class="gold-display">Gold: {{ profile.gold }} 🟡</div>
+          <button class="clear-inventory-btn" @click="openClearInventory" title="Clear Inventory">
+            🗑️ Clear Inventory
+          </button>
         </div>
       </div>
 
-      <!-- Column 3: Inventory -->
-      <div class="inventory-section">
-        <h2 class="section-title">Inventory ({{ inventory.length }}/30)</h2>
-        <Inventory
-          :key="counter"
-          :items="gridInventory"
-          :loading="loading"
-          :error="error"
-          :showButton="showButton"
-          :selectedItem="selectedItem"
-          @select-item="selectInventoryItem"
-          @equipItem="equipItem"
-          @sellItem="sellItem"
-          @refreshProfile="fetchProfile"
-        />
+      <!-- Right Side: Inventory/Stats Tabs -->
+      <div class="right-panel">
+        <!-- Right Tabs Header -->
+        <div class="right-tabs-header">
+          <button
+            class="right-tab-btn"
+            :class="{ active: rightTab === 'inventory' }"
+            @click="rightTab = 'inventory'"
+          >
+            Inventory
+          </button>
+          <button
+            class="right-tab-btn"
+            :class="{ active: rightTab === 'stats' }"
+            @click="rightTab = 'stats'"
+          >
+            Stats
+          </button>
+        </div>
 
-        <!-- Materials Tabs Panel -->
-        <div class="materials-panel">
-          <div class="tabs-header">
+        <!-- Inventory Tab -->
+        <div v-show="rightTab === 'inventory'" class="inventory-tab-content">
+        <!-- Inventory Sub-tabs -->
+        <div class="sub-tabs-header">
+          <button
+            class="sub-tab-btn"
+            :class="{ active: inventorySubTab === 'items' }"
+            @click="inventorySubTab = 'items'"
+          >
+            Items ({{ inventory.length }}/30)
+          </button>
+          <button
+            class="sub-tab-btn"
+            :class="{ active: inventorySubTab === 'materials' }"
+            @click="inventorySubTab = 'materials'"
+          >
+            Materials
+          </button>
+        </div>
+
+        <!-- Items Sub-tab -->
+        <div v-show="inventorySubTab === 'items'" class="inventory-section">
+          <Inventory
+            :key="counter"
+            :items="gridInventory"
+            :loading="loading"
+            :error="error"
+            :showButton="showButton"
+            :selectedItem="selectedItem"
+            @select-item="selectInventoryItem"
+            @equipItem="equipItem"
+            @sellItem="sellItem"
+            @refreshProfile="fetchProfile"
+          />
+        </div>
+
+        <!-- Materials Sub-tab -->
+        <div v-show="inventorySubTab === 'materials'" class="materials-section">
+          <!-- Materials Type Tabs -->
+          <div class="materials-tabs-header">
             <button
-              class="tab-btn"
-              :class="{ active: activeTab === 'gathering' }"
-              @click="activeTab = 'gathering'"
+              class="materials-tab-btn"
+              :class="{ active: materialsSubTab === 'gathering' }"
+              @click="materialsSubTab = 'gathering'"
             >
               Gathering
             </button>
             <button
-              class="tab-btn"
-              :class="{ active: activeTab === 'enchant' }"
-              @click="activeTab = 'enchant'"
+              class="materials-tab-btn"
+              :class="{ active: materialsSubTab === 'enchant' }"
+              @click="materialsSubTab = 'enchant'"
             >
-              Enchant
+              Enchant Stones
             </button>
             <button
-              class="tab-btn"
-              :class="{ active: activeTab === 'mining' }"
-              @click="activeTab = 'mining'"
+              class="materials-tab-btn"
+              :class="{ active: materialsSubTab === 'mining' }"
+              @click="materialsSubTab = 'mining'"
             >
               Mining
             </button>
           </div>
 
-          <!-- Gathering Tab -->
-          <div v-show="activeTab === 'gathering'" class="tab-content">
-            <div class="materials-list">
-              <div
-                v-for="(quantity, itemName) in gatheringItems"
-                :key="itemName"
-                class="material-item tooltip-container"
-              >
-                <img
-                  :src="generateGatheringImageName(itemName)"
-                  :alt="itemName"
-                  class="material-icon"
-                  @error="handleGatheringImageError"
-                /> 
-                <span class="material-separator">:</span>
-                <span class="material-quantity">{{ quantity }}</span>
-                <div class="material-tooltip">{{ getGatheringDisplayName(itemName) }}</div>
+          <!-- Materials Grid Display -->
+          <div class="materials-grid">
+            <div
+              v-for="(material, index) in materialsGridData"
+              :key="index"
+              class="material-grid-item"
+              :class="{ empty: !material }"
+            >
+              <template v-if="material">
+                <div class="material-item-wrapper">
+                  <img
+                    v-if="material.type === 'gathering'"
+                    :src="generateGatheringImageName(material.name)"
+                    :alt="material.displayName"
+                    class="material-img"
+                    @error="handleGatheringImageError"
+                  />
+                  <img
+                    v-else-if="material.type === 'enchant'"
+                    :src="generateEnchantImageName(material.name)"
+                    :alt="material.displayName"
+                    class="material-img"
+                    @error="handleEnchantImageError"
+                  />
+                  <img
+                    v-else-if="material.type === 'mining'"
+                    :src="generateMiningImageName(material.name)"
+                    :alt="material.displayName"
+                    class="material-img"
+                    @error="handleMiningImageError"
+                  />
+                  <div class="material-quantity-badge">{{ material.quantity }}</div>
+                  <div class="material-grid-tooltip">{{ material.displayName }}</div>
+                </div>
+              </template>
+              <template v-else>
+                <div class="material-img" style="opacity: 0.2">Empty</div>
+              </template>
+            </div>
+          </div>
+        </div>
+      </div>
+
+        <!-- Stats Tab -->
+        <div v-show="rightTab === 'stats'" class="stats-tab-content">
+          <!-- Character Stats Section -->
+          <div class="stats-section">
+            <h2 class="stats-section-header">Character Stats</h2>
+            <div class="stats-content" v-if="profile.total_stats">
+              <div v-for="[key, value] in filteredStats" :key="key" class="stat-row-upgrade">
+                <span class="stat-label">
+                  <template v-if="key === 'hp'">
+                    {{ statLabels[key] || key }}: {{ current_hp }}/{{ value }}
+                  </template>
+                  <template v-else>
+                    {{ statLabels[key] || key }}: {{ value.toFixed(2) }}
+                  </template>
+                </span>
+                <span class="stat-controls">
+                  <span class="stat-price">{{
+                    key === 'strength' ? str_cost :
+                    key === 'dexterity' ? dex_cost :
+                    key === 'intelligence' ? int_cost :
+                    key === 'hp' ? hp_cost : 0
+                  }} 🟡</span>
+                  <button
+                    class="stat-btn"
+                    @click="upgradeStat(key)"
+                    :disabled="profile.gold < (
+                      key === 'strength' ? str_cost :
+                      key === 'dexterity' ? dex_cost :
+                      key === 'intelligence' ? int_cost :
+                      key === 'hp' ? hp_cost : 0
+                    )"
+                  >+</button>
+                </span>
               </div>
             </div>
           </div>
 
-          <!-- Enchant Tab -->
-          <div v-show="activeTab === 'enchant'" class="tab-content">
-            <div class="materials-list">
-              <div
-                v-for="(quantity, itemName) in enchantItems"
-                :key="itemName"
-                class="material-item tooltip-container"
-              >
-                <img
-                  :src="generateEnchantImageName(itemName)"
-                  :alt="itemName"
-                  class="material-icon"
-                  @error="handleEnchantImageError"
-                />
-                <span class="material-separator">:</span>
-                <span class="material-quantity">{{ quantity }}</span>
-                <div class="material-tooltip">Stone of {{ capitalize(itemName) }}</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Mining Tab -->
-          <div v-show="activeTab === 'mining'" class="tab-content">
-            <div class="materials-list">
-              <div
-                v-for="(quantity, itemName) in miningItems"
-                :key="itemName"
-                class="material-item tooltip-container"
-              >
-                <img
-                  :src="generateMiningImageName(itemName)"
-                  :alt="itemName"
-                  class="material-icon"
-                  @error="handleMiningImageError"
-                />
-                <span class="material-separator">:</span>
-                <span class="material-quantity">{{ quantity }}</span>
-                <div class="material-tooltip">{{ getMiningDisplayName(itemName) }}</div>
+          <!-- Advanced Stats Section -->
+          <div class="stats-section">
+            <h2 class="stats-section-header">Advanced Stats</h2>
+            <div class="stats-content" v-if="profile.total_stats">
+              <div v-for="[key, value] in filteredTotalStats" :key="key" class="stat-row">
+                {{ statLabels[key] || key }}:
+                {{
+                  key === "hp" ? current_hp + "/" + value :
+                  ["lifesteal", "crit_rate", "crit_dmg", "hit_rate"].includes(key) ?
+                  (typeof value === "number" ? value.toFixed(2) : value) + "%" :
+                  typeof value === "number" ? value.toFixed(2) : value
+                }}
               </div>
             </div>
           </div>
@@ -765,12 +830,66 @@ async function clearInventory() {
   font-family: 'Cinzel', serif;
 }
 
-/* Grid Layout */
-.profile-grid {
+/* Main Layout */
+.main-layout {
   display: grid;
-  grid-template-columns: auto auto 1fr;
-  gap: 2rem;
-  align-items: start;
+  grid-template-columns: 450px 1fr;
+  gap: 1.5rem;
+  min-height: 600px;
+}
+
+/* Left Panel (Equipment - Always Visible) */
+.left-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Right Panel (Inventory/Stats Tabs) */
+.right-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Right Tabs Header */
+.right-tabs-header {
+  display: flex;
+  gap: 1rem;
+  border-bottom: 3px solid #6a0f19;
+  padding-bottom: 0;
+}
+
+.right-tab-btn {
+  flex: 1;
+  padding: 1rem 2rem;
+  background: linear-gradient(180deg, rgba(34, 23, 27, 0.6) 70%, rgba(24, 16, 18, 0.6) 100%);
+  border: 2px solid #3a1c0e;
+  border-bottom: none;
+  border-radius: 12px 12px 0 0;
+  color: #c9b8a0;
+  font-family: 'Cinzel', serif;
+  font-size: 1.2rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.right-tab-btn:hover {
+  background: linear-gradient(180deg, rgba(34, 23, 27, 0.8) 70%, rgba(24, 16, 18, 0.8) 100%);
+  border-color: #6a0f19;
+  color: #d4af37;
+  transform: translateY(-2px);
+}
+
+.right-tab-btn.active {
+  background: linear-gradient(135deg, #6a0f19 0%, #4a0a12 100%);
+  border-color: #d4af37;
+  color: #d4af37;
+  box-shadow: 0 -2px 16px rgba(212, 175, 55, 0.4), inset 0 0 20px rgba(212, 175, 55, 0.1);
+  transform: translateY(0);
 }
 
 /* Section Titles */
@@ -784,7 +903,7 @@ async function clearInventory() {
 
 /* Equipment Section */
 .equipment-section {
-  min-width: 350px;
+  width: 100%;
   background-image: url('@/assets/inv_background.png');
   background-size: cover;
   background-position: center;
@@ -794,6 +913,102 @@ async function clearInventory() {
   border: 2px solid #6a0f19;
 }
 
+/* Level Info Section */
+.level-info-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: linear-gradient(180deg, #22171b 70%, #181012 100%);
+  border: 2px solid #6a0f19;
+  border-radius: 8px;
+}
+
+.level-display, .lifeskill-display {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.level-text, .lifeskill-text {
+  font-size: 1rem;
+  font-weight: bold;
+  color: #d4af37;
+  text-align: center;
+}
+
+.level-bar-container, .lifeskill-bar-container-small {
+  position: relative;
+  width: 100%;
+  height: 1.25rem;
+  background: #1a0f15;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #6a0f19;
+}
+
+.level-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #4caf50 0%, #2e7d32 100%);
+  transition: width 0.3s ease;
+}
+
+.lifeskill-bar-small {
+  height: 100%;
+  background: linear-gradient(90deg, #9c27b0 0%, #6a1b9a 100%);
+  transition: width 0.3s ease;
+}
+
+.level-bar-text, .lifeskill-bar-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-weight: bold;
+  color: #fff;
+  font-size: 0.85rem;
+  text-shadow: 0 0 4px #000;
+  pointer-events: none;
+}
+
+/* Equipment Info Section */
+.equipment-info-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: linear-gradient(180deg, #22171b 70%, #181012 100%);
+  border: 2px solid #6a0f19;
+  border-radius: 8px;
+}
+
+.gold-display {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #d4af37;
+}
+
+.clear-inventory-btn {
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #7a3a3a 0%, #5a2a2a 100%);
+  border: 2px solid #a33;
+  border-radius: 8px;
+  color: #e0cfa9;
+  font-family: 'Cinzel', serif;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.clear-inventory-btn:hover {
+  background: linear-gradient(135deg, #8a4a4a 0%, #6a3a3a 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(163, 51, 51, 0.4);
+}
+
 .equipment-grid {
   display: grid;
   grid-template-areas:
@@ -801,9 +1016,11 @@ async function clearInventory() {
     "weapon armor gloves"
     ". pants ."
     ". boots .";
-  gap: 1rem;
+  gap: 0.75rem;
   grid-template-columns: 1fr 1fr 1fr;
   grid-template-rows: auto auto auto auto;
+  max-width: 400px;
+  margin: 0 auto;
 }
 
 .equipment-slot {
@@ -811,7 +1028,7 @@ async function clearInventory() {
   border: 2px solid #6a0f19;
   border-radius: 8px;
   padding: 0.25rem;
-  min-height: 120px;
+  min-height: 100px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -827,8 +1044,8 @@ async function clearInventory() {
   position: relative;
   cursor: pointer;
   transition: all 0.3s ease;
-  width: 120px;
-  height: 110px;
+  width: 100px;
+  height: 100px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -961,20 +1178,40 @@ async function clearInventory() {
 .rarity-epic { color: #9c27b0; }
 .rarity-legendary { color: #ff9800; }
 
-/* Stats Section */
-.stats-section {
-  min-width: 300px;
-  max-width: 400px;
+/* Stats Tab Content */
+.stats-tab-content {
+  padding: 1rem;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 1.5rem;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
-.stats-box {
+.stats-section {
   background: linear-gradient(180deg, #22171b 70%, #181012 100%);
   border: 2px solid #6a0f19;
   border-radius: 8px;
+  overflow: hidden;
+}
+
+.stats-section-header {
+  background: linear-gradient(135deg, #6a0f19 0%, #4a0a12 100%);
+  color: #d4af37;
   padding: 1rem;
+  text-align: center;
+  font-size: 1.3rem;
+  font-weight: bold;
+  border-bottom: 3px solid #d4af37;
+  letter-spacing: 1px;
+  margin: 0;
+}
+
+.stats-content {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
 .stat-row {
@@ -996,6 +1233,7 @@ async function clearInventory() {
   font-size: 1rem;
   color: #e7d7b1;
   border-bottom: 1px solid rgba(106, 15, 25, 0.3);
+  gap: 1.5rem;
 }
 
 .stat-row-upgrade:last-child {
@@ -1004,12 +1242,14 @@ async function clearInventory() {
 
 .stat-label {
   flex: 1;
+  min-width: 0;
 }
 
 .stat-controls {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.75rem;
+  flex-shrink: 0;
 }
 
 .stat-price {
@@ -1118,45 +1358,52 @@ async function clearInventory() {
   transition: width 0.3s ease;
 }
 
-.lifeskill-text {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-weight: bold;
-  color: #fff;
-  text-shadow: 0 0 4px #000;
-  pointer-events: none;
-}
-
-/* Gold Row */
-.gold-row {
-  background: linear-gradient(180deg, #22171b 70%, #181012 100%);
-  border: 2px solid #6a0f19;
-  border-radius: 8px;
-  padding: 0.75rem 1rem;
+/* Inventory Tab Content */
+.inventory-tab-content {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  gap: 1rem;
 }
 
-.trash-btn {
-  background: transparent;
-  border: 1px solid #7a3a3a;
-  border-radius: 4px;
-  padding: 0.25rem 0.5rem;
-  font-size: 0.9rem;
+/* Sub-tabs Header */
+.sub-tabs-header {
+  display: flex;
+  gap: 0.75rem;
+  border-bottom: 2px solid #6a0f19;
+  padding-bottom: 0.5rem;
+}
+
+.sub-tab-btn {
+  flex: 1;
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(180deg, rgba(34, 23, 27, 0.5) 70%, rgba(24, 16, 18, 0.5) 100%);
+  border: 2px solid #3a1c0e;
+  border-radius: 8px 8px 0 0;
+  color: #c9b8a0;
+  font-family: 'Cinzel', serif;
+  font-size: 1rem;
+  font-weight: 600;
   cursor: pointer;
-  transition: background 0.3s ease;
+  transition: all 0.3s ease;
+  letter-spacing: 0.5px;
 }
 
-.trash-btn:hover {
-  background: #7a3a3a;
+.sub-tab-btn:hover {
+  background: linear-gradient(180deg, rgba(34, 23, 27, 0.7) 70%, rgba(24, 16, 18, 0.7) 100%);
+  border-color: #6a0f19;
+  color: #d4af37;
+}
+
+.sub-tab-btn.active {
+  background: linear-gradient(135deg, #6a0f19 0%, #4a0a12 100%);
+  border-color: #d4af37;
+  color: #d4af37;
+  font-weight: bold;
+  box-shadow: 0 0 12px rgba(212, 175, 55, 0.3);
 }
 
 /* Inventory Section */
 .inventory-section {
-  min-width: 0;
   background-image: url('@/assets/inv_background.png');
   background-size: cover;
   background-position: center;
@@ -1166,90 +1413,130 @@ async function clearInventory() {
   border: 2px solid #6a0f19;
 }
 
-/* Materials Panels */
-.materials-panel {
-  margin-top: 1.5rem;
-  background: linear-gradient(180deg, #22171b 70%, #181012 100%);
-  border: 2px solid #6a0f19;
-  border-radius: 8px;
-  padding: 0.75rem;
-  width: 100%;
-  max-width: 100%;
-  box-sizing: border-box;
-  overflow: visible;
+/* Materials Section */
+.materials-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
 }
 
-/* Tabs Header */
-.tabs-header {
+/* Materials Tabs Header */
+.materials-tabs-header {
   display: flex;
   gap: 0.5rem;
-  margin-bottom: 0.75rem;
-  border-bottom: 1px solid #6a0f19;
-  padding-bottom: 0.5rem;
+  margin-bottom: 1rem;
+  padding: 0;
 }
 
-.tab-btn {
+.materials-tab-btn {
   flex: 1;
-  padding: 0.4rem 0.75rem;
-  background: linear-gradient(180deg, rgba(34, 23, 27, 0.5) 70%, rgba(24, 16, 18, 0.5) 100%);
-  border: 1px solid #2d161a;
-  border-radius: 6px;
+  padding: 0.6rem 1rem;
+  background: linear-gradient(180deg, rgba(34, 23, 27, 0.9) 70%, rgba(24, 16, 18, 0.9) 100%);
+  border: 2px solid #3a1c0e;
+  border-radius: 8px;
   color: #c9b8a0;
   font-family: 'Cinzel', serif;
   font-size: 0.9rem;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
 }
 
-.tab-btn:hover {
-  background: linear-gradient(180deg, rgba(34, 23, 27, 0.7) 70%, rgba(24, 16, 18, 0.7) 100%);
+.materials-tab-btn:hover {
+  background: linear-gradient(180deg, rgba(34, 23, 27, 1) 70%, rgba(24, 16, 18, 1) 100%);
   border-color: #6a0f19;
+  color: #d4af37;
+  transform: translateY(-1px);
 }
 
-.tab-btn.active {
+.materials-tab-btn.active {
   background: linear-gradient(135deg, #6a0f19 0%, #4a0a12 100%);
   border-color: #d4af37;
   color: #d4af37;
   font-weight: bold;
+  box-shadow: 0 0 12px rgba(212, 175, 55, 0.4);
 }
 
-/* Tab Content */
-.tab-content {
-  min-height: 150px;
-  height: 150px;
-  overflow: visible;
-}
-
-.materials-list {
+/* Materials Grid */
+.materials-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 0.5rem;
-  align-items: start;
+  grid-template-columns: repeat(6, 90px);
+  gap: 0.7rem;
+  margin-top: 0;
+  width: auto;
+  box-sizing: border-box;
+  background-image: url('@/assets/inv_background.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 2px solid #6a0f19;
 }
 
-.material-item {
+.material-grid-item {
   position: relative;
+  width: 90px;
+  height: 90px;
+  background: linear-gradient(180deg, #22171b 70%, #181012 100%);
+  border: 2px solid #2d161a;
+  border-radius: 0.75rem;
+  color: #e7d7b1;
+  box-shadow: 0 2px 8px rgba(40, 10, 20, 0.3);
+  font-family: 'Cinzel', serif;
+  font-size: 1.05rem;
+  transition: box-shadow 0.2s, border-color 0.2s;
   display: flex;
-  flex-direction: row;
   align-items: center;
-  gap: 0.5rem;
-  background: linear-gradient(180deg, rgba(34, 23, 27, 0.5) 70%, rgba(24, 16, 18, 0.5) 100%);
-  border: 1.5px solid #2d161a;
-  border-radius: 6px;
-  padding: 0.4rem 0.6rem;
-  transition: all 0.3s ease;
-  white-space: nowrap;
   justify-content: center;
+  padding: 0;
+  overflow: visible;
+  box-sizing: border-box;
+  z-index: 1;
 }
 
-.material-item:hover {
-  border-color: #d4af37;
-  box-shadow: 0 0 8px rgba(212, 175, 55, 0.3);
-  transform: translateY(-2px);
-  z-index: 1000;
+.material-grid-item:hover:not(.empty) {
+  box-shadow: 0 0 0.625rem #6a0f19;
+  border-color: #e7d7b1;
+  z-index: 100;
 }
 
-.material-tooltip {
+.material-item-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.material-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 0.55rem;
+  margin: 0;
+  padding: 0;
+  display: block;
+}
+
+.material-quantity-badge {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  background: rgba(0, 0, 0, 0.8);
+  border: 1px solid #d4af37;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  color: #ffe600;
+  min-width: 20px;
+  text-align: center;
+}
+
+.material-grid-tooltip {
   display: none;
   position: absolute;
   bottom: 100%;
@@ -1258,40 +1545,18 @@ async function clearInventory() {
   background: #0d0508;
   color: #e7d7b1;
   border: 2px solid #6a0f19;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.8);
-  font-family: 'Cinzel', serif;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.8);
   padding: 0.5rem 0.75rem;
   border-radius: 6px;
   white-space: nowrap;
   font-size: 0.9rem;
   pointer-events: none;
   margin-bottom: 0.5rem;
-  z-index: 1001;
+  z-index: 1000;
 }
 
-.material-item:hover .material-tooltip {
+.material-item-wrapper:hover .material-grid-tooltip {
   display: block;
-}
-
-.material-icon {
-  width: 40px;
-  height: 40px;
-  object-fit: contain;
-  flex-shrink: 0;
-}
-
-.material-separator {
-  color: #6a4a3a;
-  font-size: 1.1rem;
-  font-weight: bold;
-}
-
-.material-quantity {
-  font-size: 1.1rem;
-  font-weight: bold;
-  color: #ffe600;
-  text-shadow: 0 1px 4px #000;
-  min-width: 24px;
 }
 
 /* Floating Action Panel */
@@ -1499,17 +1764,18 @@ async function clearInventory() {
 
 /* Responsive Design */
 @media (max-width: 1400px) {
-  .profile-grid {
+  .main-layout {
+    grid-template-columns: 400px 1fr;
+  }
+}
+
+@media (max-width: 1024px) {
+  .main-layout {
     grid-template-columns: 1fr;
-    gap: 1.5rem;
   }
 
-  .equipment-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-
-  .stats-section {
-    max-width: 100%;
+  .stats-layout {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -1525,6 +1791,21 @@ async function clearInventory() {
 
   .section-title {
     font-size: 1.1rem;
+  }
+
+  .right-tab-btn {
+    font-size: 1rem;
+    padding: 0.75rem 1rem;
+  }
+
+  .materials-grid {
+    grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+    gap: 0.4rem;
+  }
+
+  .material-grid-item {
+    width: 70px;
+    height: 70px;
   }
 }
 </style>

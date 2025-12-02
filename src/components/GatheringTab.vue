@@ -473,19 +473,21 @@ onMounted(async () => {
 
       <!-- timer display - only shown when active -->
       <div v-if="timer.active" class="timer-display">
-        <strong>Time remaining:</strong>
-        <span class="timer-value">
-          <template v-if="timer.minutes >= 60">
-            {{ Math.floor(timer.minutes / 60) }}h
-            {{ timer.minutes % 60 }}m:
-            {{ String(timer.seconds).padStart(2, "0") }}s
-          </template>
-          <template v-else>
-            {{ timer.minutes }}m:{{
-              String(timer.seconds).padStart(2, "0")
-            }}s
-          </template>
-        </span>
+        <div class="timer-row">
+          <strong>Time remaining:</strong>
+          <span class="timer-value">
+            <template v-if="timer.minutes >= 60">
+              {{ Math.floor(timer.minutes / 60) }}h
+              {{ timer.minutes % 60 }}m:
+              {{ String(timer.seconds).padStart(2, "0") }}s
+            </template>
+            <template v-else>
+              {{ timer.minutes }}m:{{
+                String(timer.seconds).padStart(2, "0")
+              }}s
+            </template>
+          </span>
+        </div>
         <button
           class="btn btn-danger btn-cancel mt-3"
           @click="showCancelConfirm = true"
@@ -698,8 +700,13 @@ onMounted(async () => {
   gap: 0.4rem;
 }
 
+.timer-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .timer-value {
-  margin-left: 0.5rem;
   font-weight: bold;
   color: #fff;
 }

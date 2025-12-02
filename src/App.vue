@@ -2,11 +2,15 @@
 import { onMounted, ref, provide, watchEffect, computed, watch} from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { authFetch } from "./utils/authFetch";
+import { useWorldBossTimer } from "./composables/useWorldBossTimer";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const isLoggedIn = ref(false);
 const profile = ref(null);
 provide("isLoggedIn", isLoggedIn);
+
+// World Boss Timer
+const { isActive: isBossActive, formattedTime: bossTimeRemaining } = useWorldBossTimer();
 
 // Check localStorage on app load
 if (localStorage.getItem("access")) {
@@ -173,6 +177,16 @@ const expandedChapters = ref({
         </router-link>
       </li>
     </ul>
+
+    <!-- World Boss Timer -->
+    <div v-if="isLoggedIn && isBossActive" class="world-boss-timer">
+      <div class="boss-timer-icon">⚔️</div>
+      <div class="boss-timer-content">
+        <div class="boss-timer-title">World Boss Active</div>
+        <div class="boss-timer-countdown">{{ bossTimeRemaining }}</div>
+      </div>
+    </div>
+
     <hr />
     <div v-if="isLoggedIn" class="dropdown">
       <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle character-name-link"
@@ -373,5 +387,63 @@ const expandedChapters = ref({
 
 .nested-chapter {
   margin-top: 0.25rem;
+}
+
+/* World Boss Timer */
+.world-boss-timer {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  margin: 0.5rem 0;
+  background: linear-gradient(135deg, #6a0f19 0%, #4a0a12 100%);
+  border: 2px solid #d4af37;
+  border-radius: 8px;
+  box-shadow: 0 0 16px rgba(212, 175, 55, 0.4), inset 0 0 20px rgba(212, 175, 55, 0.1);
+  animation: pulse-border 2s ease-in-out infinite;
+}
+
+@keyframes pulse-border {
+  0%, 100% {
+    box-shadow: 0 0 16px rgba(212, 175, 55, 0.4), inset 0 0 20px rgba(212, 175, 55, 0.1);
+    border-color: #d4af37;
+  }
+  50% {
+    box-shadow: 0 0 24px rgba(212, 175, 55, 0.6), inset 0 0 30px rgba(212, 175, 55, 0.2);
+    border-color: #ffd700;
+  }
+}
+
+.boss-timer-icon {
+  font-size: 2rem;
+  animation: shake 0.5s ease-in-out infinite;
+}
+
+@keyframes shake {
+  0%, 100% { transform: rotate(-5deg); }
+  50% { transform: rotate(5deg); }
+}
+
+.boss-timer-content {
+  flex: 1;
+}
+
+.boss-timer-title {
+  font-family: 'Cinzel', serif;
+  font-size: 0.9rem;
+  font-weight: bold;
+  color: #d4af37;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 0.25rem;
+}
+
+.boss-timer-countdown {
+  font-family: 'Courier New', monospace;
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #fff;
+  text-shadow: 0 0 8px rgba(212, 175, 55, 0.8);
+  letter-spacing: 2px;
 }
 </style>

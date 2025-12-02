@@ -19,6 +19,7 @@ const error = ref(null);
 const showEnchantModal = ref(false);
 const enchantModalMessage = ref('');
 const enchantModalType = ref(''); // 'success' or 'failed'
+const activeTab = ref('inventory'); // 'inventory' or 'equipped'
 const stoneLabels = {
   apprentice: "Stone of Apprentice",
   growth: "Stone of Growth",
@@ -202,6 +203,11 @@ const hasEnoughMaterials = computed(() => {
 
   return true;
 });
+
+// Computed property to get items based on active tab
+const displayedItems = computed(() => {
+  return activeTab.value === 'inventory' ? inventory.value : equippedItems.value;
+});
 </script>
 
 <template>
@@ -227,7 +233,28 @@ const hasEnoughMaterials = computed(() => {
     </div>
     </div>
   <div class="inventory-enchant-wrapper">
-    <Inventory :items="inventory" @select-item="handleSelectItem" />
+    <!-- Tabs for switching between inventory and equipped items -->
+    <div class="items-section">
+      <div class="tabs-header">
+        <button
+          class="tab-btn"
+          :class="{ active: activeTab === 'inventory' }"
+          @click="activeTab = 'inventory'"
+        >
+          Inventory
+        </button>
+        <button
+          class="tab-btn"
+          :class="{ active: activeTab === 'equipped' }"
+          @click="activeTab = 'equipped'"
+        >
+          Equipped
+        </button>
+      </div>
+      <div class="tab-content">
+        <Inventory :items="displayedItems" @select-item="handleSelectItem" />
+      </div>
+    </div>
     <div v-if="selectedItem" class="selected-item-container">
       <div class="enchant-panel-unified dark-fantasy-box">
         <!-- Item Info Section -->
@@ -278,7 +305,7 @@ const hasEnoughMaterials = computed(() => {
 
           <!-- Stone Requirements -->
           <div v-if="enchantResources.quantity_apprentice" class="resource-item">
-            <span class="resource-label">Apprentice</span>
+            <span class="resource-label">Stone of Apprentice</span>
             <div class="resource-values">
               <span class="current-value">{{ profile.inventory_enchant_items?.apprentice || 0 }}</span>
               <span class="separator">/</span>
@@ -287,7 +314,7 @@ const hasEnoughMaterials = computed(() => {
           </div>
 
           <div v-if="enchantResources.quantity_growth" class="resource-item">
-            <span class="resource-label">Growth</span>
+            <span class="resource-label">Stone of Growth</span>
             <div class="resource-values">
               <span class="current-value">{{ profile.inventory_enchant_items?.growth || 0 }}</span>
               <span class="separator">/</span>
@@ -296,7 +323,7 @@ const hasEnoughMaterials = computed(() => {
           </div>
 
           <div v-if="enchantResources.quantity_essence" class="resource-item">
-            <span class="resource-label">Essence</span>
+            <span class="resource-label">Stone of Essence</span>
             <div class="resource-values">
               <span class="current-value">{{ profile.inventory_enchant_items?.essence || 0 }}</span>
               <span class="separator">/</span>
@@ -305,7 +332,7 @@ const hasEnoughMaterials = computed(() => {
           </div>
 
           <div v-if="enchantResources.quantity_legends" class="resource-item">
-            <span class="resource-label">Legends</span>
+            <span class="resource-label">Stone of Legends</span>
             <div class="resource-values">
               <span class="current-value">{{ profile.inventory_enchant_items?.legends || 0 }}</span>
               <span class="separator">/</span>
@@ -370,6 +397,57 @@ const hasEnoughMaterials = computed(() => {
   border-radius: 12px;
   border: 2px solid #6a0f19;
   margin: 1rem 0;
+}
+
+/* Items section with tabs */
+.items-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Tabs Header */
+.tabs-header {
+  display: flex;
+  gap: 0.5rem;
+  border-bottom: 2px solid #6a0f19;
+  padding-bottom: 0.5rem;
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(180deg, rgba(34, 23, 27, 0.5) 70%, rgba(24, 16, 18, 0.5) 100%);
+  border: 2px solid #3a1c0e;
+  border-radius: 8px 8px 0 0;
+  color: #c9b8a0;
+  font-family: 'Cinzel', serif;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  letter-spacing: 0.5px;
+}
+
+.tab-btn:hover {
+  background: linear-gradient(180deg, rgba(34, 23, 27, 0.7) 70%, rgba(24, 16, 18, 0.7) 100%);
+  border-color: #6a0f19;
+  color: #d4af37;
+}
+
+.tab-btn.active {
+  background: linear-gradient(135deg, #6a0f19 0%, #4a0a12 100%);
+  border-color: #d4af37;
+  color: #d4af37;
+  font-weight: bold;
+  box-shadow: 0 0 12px rgba(212, 175, 55, 0.3);
+  transform: translateY(2px);
+}
+
+/* Tab Content */
+.tab-content {
+  min-height: 400px;
 }
 
 /* Container for unified panel layout */
