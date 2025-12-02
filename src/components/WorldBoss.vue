@@ -41,12 +41,12 @@ async function fetchRanking() {
       backendMessageType.value = "error";
     } else {
       ranking.value = [];
-      backendMessage.value = data.error || "Failed to fetch ranking.";
+      backendMessage.value = data.error || "World Boss is still active. Ranking will be displayed as soon as World Boss will be started.";
       backendMessageType.value = "error";
     }
   } catch (err) {
     ranking.value = [];
-    backendMessage.value = err.message || "Failed to fetch ranking.";
+    backendMessage.value = err.message || "World Boss is still active. Ranking will be displayed as soon as World Boss will be started.";
     backendMessageType.value = "error";
   }
 }
