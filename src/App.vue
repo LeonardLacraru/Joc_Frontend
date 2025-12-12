@@ -13,7 +13,8 @@ provide("isLoggedIn", isLoggedIn);
 const { isActive: isBossActive, formattedTime: bossTimeRemaining } = useWorldBossTimer();
 
 // Check localStorage on app load
-if (localStorage.getItem("access")) {
+// Only set isLoggedIn to true if we have both access and refresh tokens
+if (localStorage.getItem("access") && localStorage.getItem("refresh")) {
   isLoggedIn.value = true;
 }
 

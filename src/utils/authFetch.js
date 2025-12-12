@@ -19,9 +19,14 @@ export async function authFetch(url, options = {}) {
       options.headers["Authorization"] = `Bearer ${refreshData.access}`;
       response = await fetch(url, options);
     } else {
+      // Clear all auth data to prevent infinite redirect loop
       localStorage.removeItem("access");
       localStorage.removeItem("refresh");
-      window.location.href = "/login";
+      localStorage.removeItem("username");
+      // Only redirect if not already on login page
+      if (!window.location.pathname.includes("/login")) {
+        window.location.href = "/login";
+      }
       return;
     }
   }
