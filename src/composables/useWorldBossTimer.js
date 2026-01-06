@@ -36,21 +36,20 @@ export function useWorldBossTimer() {
 
   async function fetchBossStatus() {
     try {
-      const response = await authFetch(`${API_BASE_URL}/world_boss/create_event/`);
+      const response = await authFetch(`${API_BASE_URL}/world_boss/event_status/`);
 
       if (response && response.ok) {
         const data = await response.json();
 
-        // Check if backend says no active event
-        if (data.message === "No active event") {
+        // Check if backend says no world boss active
+        if (data.message === "No wb active" || data.status === "inactive") {
           bossStatus.value = null;
           // Keep polling to detect when a new event starts
           return;
         }
 
-        // Only set status if we have valid timestamps
-        if (data.start_time && data.end_time) {
-          // Check if expired
+        // Check if status is active and we have valid timestamps
+        if (data.status === "active" && data.start_time && data.end_time) {
           // Backend sends Unix timestamp in seconds, convert to milliseconds
           const endTime = data.end_time * 1000;
           const now = Date.now();
