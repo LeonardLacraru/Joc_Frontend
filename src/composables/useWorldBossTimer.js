@@ -86,8 +86,7 @@ export function useWorldBossTimer() {
       // Check if timer expired
       if (timeRemaining.value <= 0 && bossStatus.value) {
         bossStatus.value = null;
-        // Stop polling when boss expires
-        stopPolling();
+        // Keep polling to detect new events - don't stop
       }
     }, 100);
   }

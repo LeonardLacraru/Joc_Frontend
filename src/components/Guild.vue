@@ -189,12 +189,16 @@ async function fetchRequests() {
     try {
         const response = await authFetch(`${API_BASE_URL}/guild/requests/`);
         if (response && response.ok) {
-            requests.value = await response.json();
+            const data = await response.json();
+            // Ensure requests is always an array
+            requests.value = Array.isArray(data) ? data : [];
         } else {
             const errData = await response.json();
+            requests.value = [];
             showBackendMessage(`Error! ${errData.error || errData.detail}`, 'error');
         }
     } catch (err) {
+        requests.value = [];
         showBackendMessage(`Error! ${err.message}`, 'error');
     }
 }
@@ -353,11 +357,12 @@ async function kickPlayer() {
             </thead>
             <tbody>
                 <tr v-for="request in requests" :key="request.id">
-                    <td class="name-cell">
+                    <td class="name-cell" v-if="request.sender">
                         <img :src="getAvatar(request.sender.race)" class="member-table-avatar" />
                         {{ request.sender.character_name }}
                     </td>
-                    <td>{{ request.sender.level }}</td>
+                    <td v-else class="name-cell">N/A</td>
+                    <td>{{ request.sender?.level || 'N/A' }}</td>
                     <td class="request-message">{{ request.description }}</td>
                     <td class="action-buttons">
                     <button 
