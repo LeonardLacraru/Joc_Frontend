@@ -7,6 +7,11 @@ const currentTime = ref(Date.now());
 let statusInterval = null;
 let timeInterval = null;
 let instanceCount = 0;
+let currentPollingInterval = 60000; // Start with slow polling (60 seconds)
+const FAST_POLLING = 15000; // 15 seconds when boss is active
+const SLOW_POLLING = 60000; // 60 seconds when boss is inactive
+let consecutiveInactiveChecks = 0; // Counter for consecutive inactive checks
+const MAX_INACTIVE_CHECKS = 3; // Stop polling after 3 consecutive inactive checks
 
 export function useWorldBossTimer() {
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -44,7 +49,16 @@ export function useWorldBossTimer() {
         // Check if backend says no world boss active
         if (data.message === "No wb active" || data.status === "inactive") {
           bossStatus.value = null;
-          // Keep polling to detect when a new event starts
+          consecutiveInactiveChecks++;
+
+          // Stop polling after MAX_INACTIVE_CHECKS consecutive inactive checks
+          if (consecutiveInactiveChecks >= MAX_INACTIVE_CHECKS) {
+            stopPolling();
+            return;
+          }
+
+          // Switch to slow polling when boss is inactive
+          adjustPollingInterval(false);
           return;
         }
 
@@ -56,25 +70,73 @@ export function useWorldBossTimer() {
 
           if (now >= endTime) {
             bossStatus.value = null;
-            // Keep polling to detect new events
+            consecutiveInactiveChecks++;
+
+            if (consecutiveInactiveChecks >= MAX_INACTIVE_CHECKS) {
+              stopPolling();
+              return;
+            }
+
+            // Switch to slow polling
+            adjustPollingInterval(false);
           } else {
+            // Reset counter when boss is active
+            consecutiveInactiveChecks = 0;
             // Update boss status
             bossStatus.value = data;
+            // Switch to fast polling when boss is active
+            adjustPollingInterval(true);
           }
         } else {
           // No active boss
           bossStatus.value = null;
-          // Keep polling to detect new events
+          consecutiveInactiveChecks++;
+
+          if (consecutiveInactiveChecks >= MAX_INACTIVE_CHECKS) {
+            stopPolling();
+            return;
+          }
+
+          // Switch to slow polling
+          adjustPollingInterval(false);
         }
       } else {
         // Response not OK - no active boss
         bossStatus.value = null;
-        // Keep polling to detect new events
+        consecutiveInactiveChecks++;
+
+        if (consecutiveInactiveChecks >= MAX_INACTIVE_CHECKS) {
+          stopPolling();
+          return;
+        }
+
+        // Switch to slow polling
+        adjustPollingInterval(false);
       }
     } catch (err) {
-      console.error('Failed to fetch world boss status:', err);
-      bossStatus.value = null;
-      // Keep polling even on error
+      // Silently handle error when no boss is active
+      if (!bossStatus.value) {
+        bossStatus.value = null;
+        consecutiveInactiveChecks++;
+
+        if (consecutiveInactiveChecks >= MAX_INACTIVE_CHECKS) {
+          stopPolling();
+          return;
+        }
+
+        adjustPollingInterval(false);
+      } else {
+        console.error('Failed to fetch world boss status:', err);
+        bossStatus.value = null;
+        consecutiveInactiveChecks++;
+
+        if (consecutiveInactiveChecks >= MAX_INACTIVE_CHECKS) {
+          stopPolling();
+          return;
+        }
+
+        adjustPollingInterval(false);
+      }
     }
   }
 
@@ -86,17 +148,32 @@ export function useWorldBossTimer() {
       // Check if timer expired
       if (timeRemaining.value <= 0 && bossStatus.value) {
         bossStatus.value = null;
-        // Keep polling to detect new events - don't stop
+        // Switch to slow polling when timer expires
+        adjustPollingInterval(false);
       }
     }, 100);
   }
 
+  function adjustPollingInterval(isBossActive) {
+    const newInterval = isBossActive ? FAST_POLLING : SLOW_POLLING;
+
+    // Only restart polling if interval changed
+    if (newInterval !== currentPollingInterval) {
+      currentPollingInterval = newInterval;
+
+      // Restart polling with new interval
+      if (statusInterval) {
+        clearInterval(statusInterval);
+        statusInterval = setInterval(fetchBossStatus, currentPollingInterval);
+      }
+    }
+  }
+
   function startPolling() {
     // Start polling if not already running
-    // Poll regardless of boss status to detect new events
     if (!statusInterval) {
-      // Fetch boss status every 15 seconds to stay in sync and detect new events
-      statusInterval = setInterval(fetchBossStatus, 15000);
+      // Start with current polling interval
+      statusInterval = setInterval(fetchBossStatus, currentPollingInterval);
     }
   }
 
@@ -104,6 +181,19 @@ export function useWorldBossTimer() {
     if (statusInterval) {
       clearInterval(statusInterval);
       statusInterval = null;
+    }
+  }
+
+  function resumePolling() {
+    // Reset the consecutive inactive checks counter
+    consecutiveInactiveChecks = 0;
+
+    // Fetch immediately
+    fetchBossStatus();
+
+    // Start polling if not already running
+    if (!statusInterval) {
+      startPolling();
     }
   }
 
@@ -143,5 +233,6 @@ export function useWorldBossTimer() {
     timeRemaining,
     formattedTime,
     fetchBossStatus,
+    resumePolling,
   };
 }

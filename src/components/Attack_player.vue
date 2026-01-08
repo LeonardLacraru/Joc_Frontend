@@ -32,11 +32,28 @@ function toggle(section) {
 <template>
   <div class="battle-bg">
     <div class="battle-panel">
-      <div v-if="pvp_battle_data && typeof pvp_battle_data === 'object'" class="battle-data">
+      <div v-if="pvp_battle_data && pvp_battle_data.summary" class="battle-data">
+        <!-- Winner Display -->
         <p class="winner">
           <span class="trophy">🏆</span>
-          Winner: <span class="winner-name">{{ pvp_battle_data.winner }}</span>
+          Winner: <span class="winner-name">{{ pvp_battle_data.summary.winner }}</span>
         </p>
+
+        <!-- Battle Summary -->
+        <div class="battle-summary">
+          <div class="combatant">
+            <h4>⚔️ Attacker</h4>
+            <p class="name">{{ pvp_battle_data.summary.attacker }}</p>
+          </div>
+          <div class="vs">VS</div>
+          <div class="combatant">
+            <h4>🛡️ Defender</h4>
+            <p class="name">{{ pvp_battle_data.summary.defender }}</p>
+          </div>
+        </div>
+
+        <p class="total-rounds">Total Rounds: {{ pvp_battle_data.summary.total_rounds }}</p>
+
         <!-- Rounds Toggle Button -->
         <div class="rounds-toggle">
           <button v-if="!showRounds" class="battle-btn" @click="showRounds = true">Show detailed rounds</button>
@@ -57,8 +74,8 @@ function toggle(section) {
                   <thead>
                     <tr>
                       <th>Action</th>
-                      <th>{{ pvp_battle_data.attacker }}</th>
-                      <th>{{ pvp_battle_data.defender }}</th>
+                      <th>{{ pvp_battle_data.summary.attacker }}</th>
+                      <th>{{ pvp_battle_data.summary.defender }}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -66,13 +83,13 @@ function toggle(section) {
                       <td><strong>{{ label }}</strong></td>
                       <td>
                         <strong>
-                          {{ roundData[pvp_battle_data.attacker][key] }}
+                          {{ roundData[pvp_battle_data.summary.attacker][key] }}
                           <span v-if="['hit_rate'].includes(key)">%</span>
                         </strong>
                       </td>
                       <td>
                         <strong>
-                          {{ roundData[pvp_battle_data.defender][key] }}
+                          {{ roundData[pvp_battle_data.summary.defender][key] }}
                           <span v-if="['hit_rate'].includes(key)">%</span>
                         </strong>
                       </td>
@@ -126,9 +143,65 @@ function toggle(section) {
   margin-right: 0.5rem;
 }
 .winner-name {
-  color: #7a3a3a;
+  color: #d4af37;
   font-weight: bold;
   font-size: 1.2em;
+}
+
+.battle-summary {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  gap: 2rem;
+  margin: 2rem 0;
+  padding: 1.5rem;
+  background: linear-gradient(90deg, #2d161a 60%, #181012 100%);
+  border-radius: 12px;
+  border: 1.5px solid #6a0f19;
+}
+
+.combatant {
+  flex: 1;
+  text-align: center;
+}
+
+.combatant h4 {
+  color: #ffe600;
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+  font-family: 'Cinzel', serif;
+  text-shadow: 0 1px 6px #181012;
+}
+
+.combatant .name {
+  color: #e7d7b1;
+  font-size: 1.3rem;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+  font-family: 'Cinzel', serif;
+}
+
+.combatant .buff {
+  color: #7a3a3a;
+  font-size: 0.9rem;
+  font-style: italic;
+  margin: 0;
+}
+
+.vs {
+  color: #d4af37;
+  font-size: 1.5rem;
+  font-weight: bold;
+  font-family: 'Cinzel', serif;
+  text-shadow: 0 2px 8px #181012;
+}
+
+.total-rounds {
+  text-align: center;
+  color: #e7d7b1;
+  font-size: 1.1rem;
+  margin-bottom: 1.5rem;
+  font-family: 'Cinzel', serif;
 }
 
 .rounds-toggle {

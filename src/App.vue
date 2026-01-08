@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref, provide, watchEffect, computed, watch} from "vue";
+import { onMounted, ref, provide, computed, watch} from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { authFetch } from "./utils/authFetch";
 import { useWorldBossTimer } from "./composables/useWorldBossTimer";
@@ -20,15 +20,6 @@ if (localStorage.getItem("access") && localStorage.getItem("refresh")) {
 
 const route = useRoute();
 const router = useRouter();
-
-watchEffect(() => {
-  const noNavbarRoutes = ["/login", "/register"];
-  if (noNavbarRoutes.includes(route.path)) {
-    document.body.classList.add("no-navbar");
-  } else {
-    document.body.classList.remove("no-navbar");
-  }
-});
 
 function logout() {
   isLoggedIn.value = false;
@@ -86,7 +77,7 @@ const expandedChapters = ref({
 </script>
 
 <template>
-  <div v-if="!['/login', '/register'].includes(route.path)" class="d-flex flex-column flex-shrink-0 p-3 sidebar-fantasy"
+  <div class="d-flex flex-column flex-shrink-0 p-3 sidebar-fantasy"
     style="width: 180px; position: fixed; top: 0; left: 0; height: 100vh; z-index: 100;">
     <!-- <router-link to="/" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto link-body-emphasis text-decoration-none">
       <span class="fs-4">Sidebar</span>

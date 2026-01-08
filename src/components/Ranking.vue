@@ -13,6 +13,7 @@ const loading = ref(false);
 const showJoinModal = ref(false);
 const joinDescription = ref('');
 const joinGuildId = ref(null);
+const currentPlayerLevel = ref(0);
 
 
 
@@ -113,6 +114,7 @@ async function attackPlayer(playerId) {
         if (response && response.ok) {
             const data = await response.json();
             pvp_battle_data.value = data;
+            console.log(pvp_battle_data.value)
             router.push('/PVP');
         } else {
             const errData = await response.json();
