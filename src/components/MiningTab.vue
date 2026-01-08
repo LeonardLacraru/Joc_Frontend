@@ -1,20 +1,19 @@
 <script setup>
-import { ref, reactive, onMounted } from "vue";
+import { ref, reactive, onMounted, onUnmounted } from "vue";
 import { authFetch } from "@/utils/authFetch";
 import { useBackendMessage } from "../utils/useBackendMessage.js";
 
 const { backendMessage, backendMessageType, showBackendMessage } = useBackendMessage();
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
-const API_BASE_WS = import.meta.env.VITE_API_BASE_URL_WSS
 
 /*
-  Module scoped manager so state and websockets survive component unmount/remount
+  Module scoped manager so state survives component unmount/remount
 */
-const wsManager = {
-  ws: null,
+const timerManager = {
   timer: { active: false, remainingTime: 0 },
   isProcessingCompletion: false,
   localTimerInterval: null,
+  pollInterval: null,
 };
 
 // reactive wrapper around manager timer so template updates
@@ -22,7 +21,7 @@ const timer = ref({ active: false, minutes: 0, seconds: 0 });
 
 const saveTimer = () => {
   try {
-    localStorage.setItem("mining_timer", JSON.stringify(wsManager.timer));
+    localStorage.setItem("mining_timer", JSON.stringify(timerManager.timer));
   } catch (e) {}
 };
 
@@ -89,28 +88,21 @@ const getDisplayName = (itemName) => {
   return itemData ? itemData.displayName : itemName;
 };
 
-// helper to get token
-const getAuthToken = () => {
-  return (
-    localStorage.getItem("access") || localStorage.getItem("token") || null
-  );
-};
-
 const startLocalTimer = (remainingSeconds) => {
   // Clear any existing timer
-  if (wsManager.localTimerInterval) {
-    clearInterval(wsManager.localTimerInterval);
-    wsManager.localTimerInterval = null;
+  if (timerManager.localTimerInterval) {
+    clearInterval(timerManager.localTimerInterval);
+    timerManager.localTimerInterval = null;
   }
 
-  wsManager.timer.remainingTime = Math.max(0, remainingSeconds);
-  wsManager.timer.active = remainingSeconds > 0;
+  timerManager.timer.remainingTime = Math.max(0, remainingSeconds);
+  timerManager.timer.active = remainingSeconds > 0;
 
   // Update display
   const updateDisplay = () => {
-    const totalSeconds = Math.max(0, wsManager.timer.remainingTime);
+    const totalSeconds = Math.max(0, timerManager.timer.remainingTime);
     timer.value = {
-      active: wsManager.timer.active,
+      active: timerManager.timer.active,
       minutes: Math.floor(totalSeconds / 60),
       seconds: totalSeconds % 60
     };
@@ -120,43 +112,20 @@ const startLocalTimer = (remainingSeconds) => {
   saveTimer();
 
   if (remainingSeconds > 0) {
-    wsManager.localTimerInterval = setInterval(async () => {
-      wsManager.timer.remainingTime--;
+    timerManager.localTimerInterval = setInterval(() => {
+      timerManager.timer.remainingTime--;
 
-      if (wsManager.timer.remainingTime <= 0) {
-        wsManager.timer.remainingTime = 0;
-        wsManager.timer.active = false;
-        clearInterval(wsManager.localTimerInterval);
-        wsManager.localTimerInterval = null;
+      if (timerManager.timer.remainingTime <= 0) {
+        timerManager.timer.remainingTime = 0;
+        timerManager.timer.active = false;
+        clearInterval(timerManager.localTimerInterval);
+        timerManager.localTimerInterval = null;
 
-        // Fetch rewards when timer reaches 0
-        if (!wsManager.isProcessingCompletion) {
-          wsManager.isProcessingCompletion = true;
-          try {
-            const resp = await authFetch(
-              `${API_BASE_URL}/town/mining/get_mining_task/`
-            );
-            if (resp && resp.ok) {
-              const data = await resp.json().catch(() => null);
-              if (data && (data.item || data.description || data.gold != null)) {
-                const result = {
-                  item: data.item ? String(data.item) : "",
-                  description: data.description ? String(data.description) : "",
-                  gold: data.gold != null ? Number(data.gold) : 0,
-                  experience: data.experience != null ? Number(data.experience) : 0,
-                };
-                localStorage.setItem("mining_last_reward", JSON.stringify(result));
-                miningResult.value = result;
-                isResultMinimized.value = false;
-                showBackendMessage("Mining task completed!", "success");
-              }
-            }
-          } catch (err) {
-            console.error("Failed to fetch mining result:", err);
-          } finally {
-            wsManager.isProcessingCompletion = false;
-          }
-        }
+        // Mark that we're processing completion so we can show a message
+        timerManager.isProcessingCompletion = true;
+
+        // Poll immediately to get rewards
+        pollMiningStatus();
       }
 
       updateDisplay();
@@ -166,157 +135,99 @@ const startLocalTimer = (remainingSeconds) => {
 };
 
 const clearTimerState = () => {
-  if (wsManager.localTimerInterval) {
-    clearInterval(wsManager.localTimerInterval);
-    wsManager.localTimerInterval = null;
+  if (timerManager.localTimerInterval) {
+    clearInterval(timerManager.localTimerInterval);
+    timerManager.localTimerInterval = null;
   }
   timer.value = { active: false, minutes: 0, seconds: 0 };
-  wsManager.timer = { active: false, remainingTime: 0 };
+  timerManager.timer = { active: false, remainingTime: 0 };
   saveTimer();
 };
 
-const closeWebsocket = () => {
-  try {
-    if (wsManager.ws) {
-      wsManager.ws.close();
-      wsManager.ws = null;
-    }
-  } catch (e) {}
+const stopPolling = () => {
+  if (timerManager.pollInterval) {
+    clearInterval(timerManager.pollInterval);
+    timerManager.pollInterval = null;
+  }
 };
 
-// Fetch mining result on mount
-const getMiningTask = async () => {
+// Poll mining status - handles both active tasks and rewards
+const pollMiningStatus = async () => {
   try {
     const resp = await authFetch(
       `${API_BASE_URL}/town/mining/get_mining_task/`
     );
-    if (!resp) {
-      return;
-    }
-
-    // If 404, there's no active task - this is normal
-    if (resp.status === 404) {
+    if (!resp || !resp.ok) {
       return;
     }
 
     const data = await resp.json().catch(() => null);
-    if (resp.ok && data && (data.item || data.description || data.gold != null)) {
-      // Store in localStorage
+    if (!data) {
+      return;
+    }
+
+    // Handle active task
+    if (data.status === "active") {
+      const remainingSeconds = data.remaining_seconds ?? 0;
+
+      // Only update timer if:
+      // 1. Timer is not active (first time or after completion)
+      // 2. The difference between server time and local time is > 3 seconds (drift correction)
+      if (remainingSeconds > 0) {
+        const currentRemaining = timerManager.timer.remainingTime;
+        const timeDifference = Math.abs(remainingSeconds - currentRemaining);
+
+        if (!timerManager.timer.active || timeDifference > 3) {
+          startLocalTimer(remainingSeconds);
+        }
+      }
+    }
+    // Handle completed task with rewards
+    else if (data.status === "no_active_task" && data.last_reward) {
+      const reward = data.last_reward;
       const result = {
-        item: data.item ? String(data.item) : "",
-        description: data.description ? String(data.description) : "",
-        gold: data.gold != null ? Number(data.gold) : 0,
-        experience: data.experience != null ? Number(data.experience) : 0,
+        item: reward.item ? String(reward.item) : "",
+        description: reward.description ? String(reward.description) : "",
+        gold: reward.gold != null ? Number(reward.gold) : 0,
+        experience: reward.experience != null ? Number(reward.experience) : 0,
       };
+
       localStorage.setItem("mining_last_reward", JSON.stringify(result));
-      // Update reactive ref
       miningResult.value = result;
       isResultMinimized.value = false;
+
+      // Stop polling when task is complete
+      stopPolling();
+      clearTimerState();
+
+      // Only show message if we were previously processing completion
+      if (timerManager.isProcessingCompletion) {
+        showBackendMessage("Mining task completed!", "success");
+        timerManager.isProcessingCompletion = false;
+      }
+    }
+    // No active task and no previous rewards
+    else if (data.status === "no_active_task") {
+      stopPolling();
+      clearTimerState();
     }
   } catch (err) {
-    console.error("Error fetching mining result:", err);
+    console.error("Error polling mining status:", err);
   }
 };
 
-// open websocket for mining
-const openTimerWebsocket = (token) => {
-  if (!token) return;
-  if (wsManager.ws) return; // already open
+// Start polling for mining status
+const startPolling = () => {
+  // Stop any existing polling
+  stopPolling();
 
-  const base = (API_BASE_WS || "").replace(/\/+$/, "");
-  const wsUrl = `${base}/timer/?token=${encodeURIComponent(token)}&activity=mining`;
+  // Poll immediately
+  pollMiningStatus();
 
-  try {
-    const w = new WebSocket(wsUrl);
-    wsManager.ws = w;
-
-    w.onopen = () => {
-      // no-op
-    };
-    w.onmessage = async (ev) => {
-      try {
-        const payload = JSON.parse(ev.data);
-
-        // Check if this message is for mining task
-        const taskType = payload.task_type ?? payload["task_type"];
-        if (taskType && taskType !== "mining") {
-          // Ignore messages that are not for mining
-          return;
-        }
-
-        const status = payload.status;
-
-        // Handle sync or active status - update local timer
-        if (status === "sync" || status === "active") {
-          const completionTime = payload.completion_time;
-          const serverTime = payload.server_time;
-
-          if (completionTime && serverTime) {
-            // Calculate remaining seconds
-            const remainingSeconds = Math.max(0, Math.floor(completionTime - serverTime));
-            startLocalTimer(remainingSeconds);
-          }
-        }
-
-        // Handle finished status
-        if (status === "finished") {
-          // Check if already processing to prevent multiple calls
-          if (wsManager.isProcessingCompletion) {
-            return;
-          }
-
-          wsManager.isProcessingCompletion = true;
-
-          // clean up websocket and timer first
-          try { closeWebsocket(); } catch (e) {}
-          try { clearTimerState(); } catch (e) {}
-
-          try {
-            const resp = await authFetch(
-              `${API_BASE_URL}/town/mining/get_mining_task/`
-            );
-            if (!resp) {
-              wsManager.isProcessingCompletion = false;
-              return;
-            }
-
-            const data = await resp.json().catch(() => null);
-
-            if (resp.ok && data) {
-              // Store in localStorage
-              const result = {
-                item: data.item ? String(data.item) : "",
-                description: data.description ? String(data.description) : "",
-                gold: data.gold != null ? Number(data.gold) : 0,
-                experience: data.experience != null ? Number(data.experience) : 0,
-              };
-              localStorage.setItem("mining_last_reward", JSON.stringify(result));
-
-              // Update reactive ref immediately to show rewards
-              miningResult.value = result;
-              isResultMinimized.value = false;
-
-              showBackendMessage("Mining task completed!", "success");
-            }
-          } catch (err) {
-            console.error("Failed to fetch mining result:", err);
-          } finally {
-            wsManager.isProcessingCompletion = false;
-          }
-        }
-      } catch (err) {
-        console.error("ws message parse error", err);
-      }
-    };
-    w.onclose = () => {
-      wsManager.ws = null;
-    };
-    w.onerror = (e) => {
-      console.error("timer websocket error:", e);
-    };
-  } catch (err) {
-    console.error("WebSocket constructor error:", err);
-  }
+  // Then poll every 5 seconds
+  timerManager.pollInterval = setInterval(() => {
+    pollMiningStatus();
+  }, 5000);
 };
 
 // Start mining activity
@@ -340,8 +251,12 @@ const startMiningActivity = async () => {
     const body = await response.json().catch(() => null);
     if (response.ok) {
       showBackendMessage("Mining task started successfully", "success");
-      const token = getAuthToken();
-      openTimerWebsocket(token);
+
+      // Mark that we're processing a new task
+      timerManager.isProcessingCompletion = false;
+
+      // Start polling to get task status
+      startPolling();
     } else {
       showBackendMessage(
         (body && (body.message || body.detail)) || "Failed to start mining task",
@@ -371,7 +286,7 @@ const cancelMiningTask = async () => {
     const body = await response.json().catch(() => null);
     if (response.ok) {
       showBackendMessage("Mining task cancelled", "success");
-      closeWebsocket();
+      stopPolling();
       clearTimerState();
       showCancelConfirm.value = false;
     } else {
@@ -390,23 +305,18 @@ const cancelMiningTask = async () => {
 
 // On component mount
 onMounted(async () => {
-  // Try to restore saved timer state and start local timer
-  try {
-    const saved = JSON.parse(localStorage.getItem("mining_timer"));
-    if (saved && typeof saved === "object" && saved.remainingTime > 0 && saved.active) {
-      // Start the local timer with the saved remaining time
-      startLocalTimer(saved.remainingTime);
-    }
-  } catch (e) {
-    /* ignore parse errors */
+  // Check for any active tasks or rewards
+  await pollMiningStatus();
+
+  // If there's an active timer, start polling
+  if (timer.value.active) {
+    startPolling();
   }
+});
 
-  const token = getAuthToken();
-  if (!token) return;
-  if (timer.value.active) openTimerWebsocket(token);
-
-  // Always check for mining results on mount
-  await getMiningTask();
+// On component unmount - cleanup intervals
+onUnmounted(() => {
+  stopPolling();
 });
 </script>
 
